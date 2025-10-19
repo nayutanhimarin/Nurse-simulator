@@ -108,6 +108,8 @@ body {
 
 /* ★看護師1人分 (3行) のグループ */
 .nurse-row-group {
+    height: calc(var(--row-height) * 3); /* ★3行分の高さ */
+    box-sizing: border-box; /* ★罫線によるズレを防止 */
     border-bottom: 1px solid #ccc;
 }
 
