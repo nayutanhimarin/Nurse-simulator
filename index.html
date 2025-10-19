@@ -8,12 +8,17 @@
 </head>
 <body>
 
+    <div class="mode-tabs">
+        <button id="btn-am" class="tab-button active">午前</button>
+        <button id="btn-pm" class="tab-button">午後</button>
+    </div>
+
     <div class="schedule-board-container">
         
         <div class="names-area">
-            <div class="names-header-spacer"></div> <div class="nurse-name-block">
-                看護師①
-            </div>
+            <div class="names-header-spacer"></div>
+            <div class="nurse-name-block">看護師①</div>
+            <!-- 必要なら他の看護師行も追加 -->
         </div>
 
         <div class="timeline-area">
@@ -21,18 +26,12 @@
                 
                 <div class="timeline-header">
                     <div class="time-row hour-row">
-                        <div class="hour-block">8</div>
-                        <div class="hour-block">9</div>
-                        <div class="hour-block">10</div>
-                        <div class="hour-block">11</div>
-                        <div class="hour-block">12</div>
-                    </div>
+                        </div>
                     <div class="time-row minute-row">
                         </div>
                 </div>
 
                 <div class="timeline-body">
-                    
                     <div class="nurse-row-group">
                         <div class="timeline-row" id="nurse1-row1">
                             </div>
@@ -41,7 +40,6 @@
                         <div class="timeline-row" id="nurse1-row3">
                             </div>
                     </div>
-                    
                 </div>
 
             </div>
