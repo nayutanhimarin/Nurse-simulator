@@ -66,10 +66,23 @@ body {
     border-bottom: 1px solid #ccc;
     border-right: 1px solid #ccc;
     box-sizing: border-box;
-    /* ★追記: 文字を上下中央に配置 */
     display: flex;
     align-items: center;
 }
+/* ▼▼▼ ここから追加 ▼▼▼ */
+/* ベッドボード用の名前ブロック（1行の高さ） */
+.bed-name-block {
+    height: var(--row-height);
+    padding: 5px;
+    font-weight: bold;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* 中央揃え */
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
 
 
 .time-row {
@@ -112,6 +125,14 @@ body {
     box-sizing: border-box; /* ★罫線によるズレを防止 */
     border-bottom: 1px solid #ccc;
 }
+/* ▼▼▼ ここから追加 ▼▼▼ */
+/* ベッド1床分 (1行) のグループ */
+.bed-row-group {
+    height: var(--row-height);
+    box-sizing: border-box;
+    border-bottom: 1px solid #ccc;
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
 
 /* ★タイムラインの1行 (5分グリッドの親) */
 .timeline-row {
@@ -147,6 +168,18 @@ body {
 }
 
 /* ★タブ切り替えボタン */
+.controls-container {
+    display: flex;
+    align-items: center; /* ★要素の縦位置を中央揃えに */
+    gap: 20px;
+}
+/* ▼▼▼ ここから追加 ▼▼▼ */
+.nurse-count-settings {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
 .mode-tabs {
     margin-bottom: 10px;
 }

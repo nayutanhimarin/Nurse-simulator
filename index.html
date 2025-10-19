@@ -8,21 +8,40 @@
 </head>
 <body>
 
-    <div class="mode-tabs">
-        <button id="btn-am" class="tab-button active">午前</button>
-        <button id="btn-pm" class="tab-button">午後</button>
+    <div class="controls-container">
+        <!-- ▼▼▼ ここから追加 ▼▼▼ -->
+        <div class="mode-tabs">
+            <button id="btn-nurse-board" class="tab-button active">看護師ボード</button>
+            <button id="btn-bed-board" class="tab-button">ベッドボード</button>
+        </div>
+        <!-- ▲▲▲ ここまで追加 ▲▲▲ -->
+        <div class="mode-tabs">
+            <button id="btn-north" class="tab-button active">北病棟</button>
+            <button id="btn-south" class="tab-button">南病棟</button>
+        </div>
+        <!-- ▼▼▼ ここから追加 ▼▼▼ -->
+        <div class="nurse-count-settings">
+            <div>
+                <label for="count-north">北病棟 人数:</label>
+                <input type="number" id="count-north" value="6" min="1" style="width: 50px;">
+            </div>
+            <div>
+                <label for="count-south">南病棟 人数:</label>
+                <input type="number" id="count-south" value="7" min="1" style="width: 50px;">
+            </div>
+        </div>
+        <!-- ▲▲▲ ここまで追加 ▲▲▲ -->
+        <div class="mode-tabs">
+            <button id="btn-am" class="tab-button active">午前</button>
+            <button id="btn-pm" class="tab-button">午後</button>
+        </div>
     </div>
 
     <div class="schedule-board-container">
         
         <div class="names-area">
             <div class="names-header-spacer"></div>
-            <div class="nurse-name-block">看護師①</div>
-            <div class="nurse-name-block">看護師②</div>
-            <div class="nurse-name-block">看護師③</div>
-            <div class="nurse-name-block">看護師④</div>
-            <div class="nurse-name-block">看護師⑤</div>
-            <div class="nurse-name-block">リーダー北</div>
+            <!-- JSで看護師名がここに追加されます -->
         </div>
 
         <div class="timeline-area">
@@ -30,42 +49,15 @@
                 
                 <div class="timeline-header">
                     <div class="time-row hour-row">
-                        </div>
+                        <!-- JSで時間がここに追加されます -->
+                    </div>
                     <div class="time-row minute-row">
-                        </div>
+                        <!-- JSで分がここに追加されます -->
+                    </div>
                 </div>
 
                 <div class="timeline-body">
-                    <div class="nurse-row-group">
-                        <div class="timeline-row" id="nurse1-row1"></div>
-                        <div class="timeline-row" id="nurse1-row2"></div>
-                        <div class="timeline-row" id="nurse1-row3"></div>
-                    </div>
-                    <div class="nurse-row-group">
-                        <div class="timeline-row" id="nurse2-row1"></div>
-                        <div class="timeline-row" id="nurse2-row2"></div>
-                        <div class="timeline-row" id="nurse2-row3"></div>
-                    </div>
-                    <div class="nurse-row-group">
-                        <div class="timeline-row" id="nurse3-row1"></div>
-                        <div class="timeline-row" id="nurse3-row2"></div>
-                        <div class="timeline-row" id="nurse3-row3"></div>
-                    </div>
-                    <div class="nurse-row-group">
-                        <div class="timeline-row" id="nurse4-row1"></div>
-                        <div class="timeline-row" id="nurse4-row2"></div>
-                        <div class="timeline-row" id="nurse4-row3"></div>
-                    </div>
-                    <div class="nurse-row-group">
-                        <div class="timeline-row" id="nurse5-row1"></div>
-                        <div class="timeline-row" id="nurse5-row2"></div>
-                        <div class="timeline-row" id="nurse5-row3"></div>
-                    </div>
-                    <div class="nurse-row-group">
-                        <div class="timeline-row" id="nurse6-row1"></div>
-                        <div class="timeline-row" id="nurse6-row2"></div>
-                        <div class="timeline-row" id="nurse6-row3"></div>
-                    </div>
+                    <!-- JSでタイムライン行がここに追加されます -->
                 </div>
 
             </div>
