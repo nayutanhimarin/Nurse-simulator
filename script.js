@@ -44,7 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDeleteBtn = document.getElementById('modal-delete-btn');
     const timelineArea = document.querySelector('.timeline-area');
     const heatmapTimeInput = document.getElementById('heatmap-time');
+    const btnUpdateHeatmap = document.getElementById('btn-update-heatmap'); // ★ヒートマップ表示ボタン
     const trashCan = document.getElementById('trash-can');
+
+    // ★ケアセット関連の要素
+    const careSetContainer = document.getElementById('care-set-container');
+    const careSetDeptSelect = document.getElementById('care-set-dept-select');
+    const careSetSummarySelect = document.getElementById('care-set-summary-select');
+    const careSetAmList = document.getElementById('care-set-am-list');
+    const careSetPmList = document.getElementById('care-set-pm-list');
 
     // 患者情報モーダル要素
     const patientModalOverlay = document.getElementById('patient-modal-overlay');
@@ -179,6 +187,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const OTHER_SUMMARY_OPTION = 'その他（自由記述）';
 
+    // ★★★ ケアセットの定義を追加 ★★★
+    const careSets = {
+        '心外': {
+            '開胸術後': {
+                am: [
+                    { name: '検温', startTime: '08:30' },
+                    { name: '清拭2', startTime: '10:00' },
+                    { name: 'リハビリ2', startTime: '11:00' },
+                ],
+                pm: [
+                    { name: '体位交換(挿管)', startTime: '14:00' },
+                    { name: '口腔ケア(挿管)', startTime: '15:00' },
+                ]
+            }
+        }
+        // 他の科、他の概要のセットもここに追加していく
+    };
+
+
     // ----------------------------------------
     // 状態管理
     // ----------------------------------------
@@ -282,7 +309,18 @@ document.addEventListener('DOMContentLoaded', () => {
         nurseList.forEach((name, index) => {
             const nameBlock = document.createElement('div');
             nameBlock.classList.add('nurse-name-block');
+            nameBlock.dataset.nurseName = name; // ★★★ 修正: data属性に純粋な看護師名を保存 ★★★
             nameBlock.textContent = name;
+            
+            // ★★★ 修正: 看護師レベルに応じたマークを追加 ★★★
+            const settings = nurseSettings[name] || {};
+            if (settings.level === '新人') {
+                nameBlock.textContent = `🔰 ${name}`;
+            } else if (settings.level === 'リーダー') {
+                nameBlock.textContent = `👑 ${name}`;
+            } else {
+                nameBlock.textContent = name;
+            }
             namesArea.appendChild(nameBlock);
             nameBlock.addEventListener('click', () => openNurseModal(name));
 
@@ -292,8 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
             assignedBedBlock.id = `nurse-${name}-beds`;
             assignedBedBlock.textContent = nurseSettings[name]?.assignedBeds.join(', ') || '';
             patientSummaryArea.appendChild(assignedBedBlock);
-
-            updateHeatmap(); // ★ヒートマップを更新
 
             const rowGroup = document.createElement('div');
             rowGroup.classList.add('nurse-row-group');
@@ -338,7 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const summaryBlock = document.createElement('div');
             summaryBlock.classList.add('patient-summary-block');
             summaryBlock.id = `bed${name}-summary`;
-            summaryBlock.textContent = ``; // 空欄にする
             patientSummaryArea.appendChild(summaryBlock);
 
             const rowGroup = document.createElement('div');
@@ -559,6 +594,103 @@ document.addEventListener('DOMContentLoaded', () => {
         placedTasks[taskIndex] = updatedTask;
         renderAllTasks();
     }
+
+    // ----------------------------------------
+    // ★★★ 関数: ケアセットのドロップを処理 ★★★
+    // ----------------------------------------
+    function handleCareSetDrop(e, bedId) {
+        e.preventDefault();
+        const careSetDataJSON = e.dataTransfer.getData('application/json');
+        if (!careSetDataJSON) return; // ケアセットのデータでなければ何もしない
+
+        const { shift, tasks: taskSet } = JSON.parse(careSetDataJSON);
+
+        // 1. 担当看護師を探す
+        // このベッドを「基本担当ベッド」に設定している看護師を探す
+        let assignedNurse = null;
+        for (const nurseName in nurseSettings) {
+            if (nurseSettings[nurseName].assignedBeds?.includes(bedId)) {
+                assignedNurse = nurseName;
+                break; // 1人見つけたらループを抜ける
+            }
+        }
+
+        if (!assignedNurse) {
+            alert(`ベッド ${bedId} の担当看護師が見つかりません。\n先に看護師設定で基本担当ベッドを割り当ててください。`);
+            return;
+        }
+
+        // 2. セット内のタスクを一つずつ配置していく
+        const addedTasks = [];
+        for (const taskInfo of taskSet) {
+            const originalTask = careTasks[taskInfo.category].items.find(t => t.name === taskInfo.name);
+            if (!originalTask) continue;
+
+            const [hour, minute] = taskInfo.startTime.split(':');
+            const startTime = new Date();
+            startTime.setHours(parseInt(hour, 10), parseInt(minute, 10), 0, 0);
+            const durationMinutes = originalTask.time * 5;
+            const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+
+            // ★複数人必要なタスクでも、まず担当看護師1人を割り当てる
+            const assignedNurses = [assignedNurse];
+
+            const newTask = {
+                id: `task_${Date.now()}_${Math.random()}`,
+                name: originalTask.name,
+                category: taskInfo.category,
+                startTime,
+                endTime,
+                duration: durationMinutes,
+                assignedNurses,
+                assignedBed: bedId,
+                displayRows: {},
+                // ★人員不足フラグを追加
+                isUnderstaffed: originalTask.staff > assignedNurses.length
+            };
+
+            // 重複チェック（簡易版：ここでは省略。厳密にはfindPlacementをここでも使う）
+            // 実際には、ここで重複チェックを行い、配置できない場合はユーザーに通知するべき
+
+            addedTasks.push(newTask);
+        }
+
+        // 3. 全てのタスクをまとめて追加
+        placedTasks.push(...addedTasks);
+        renderAllTasks();
+        updateHeatmap();
+    }
+
+    // ----------------------------------------
+    // ★★★ 関数: ケアセットプランナーを初期化・更新 ★★★
+    // ----------------------------------------
+    function initializeCareSetPlanner() {
+        // 科の選択肢を作成
+        careSetDeptSelect.innerHTML = '<option value="">科を選択...</option>';
+        Object.keys(careSets).forEach(dept => {
+            careSetDeptSelect.innerHTML += `<option value="${dept}">${dept}</option>`;
+        });
+
+        // イベントリスナー
+        careSetDeptSelect.addEventListener('change', updateCareSetSummaryOptions);
+        careSetSummarySelect.addEventListener('change', renderCareSet);
+
+        // ドラッグ開始イベント
+        document.getElementById('care-set-am').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'am'));
+        document.getElementById('care-set-pm').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'pm'));
+    }
+
+    function updateCareSetSummaryOptions() {
+        const selectedDept = careSetDeptSelect.value;
+        careSetSummarySelect.innerHTML = '<option value="">患者概要を選択...</option>';
+        if (selectedDept && careSets[selectedDept]) {
+            Object.keys(careSets[selectedDept]).forEach(summary => {
+                careSetSummarySelect.innerHTML += `<option value="${summary}">${summary}</option>`;
+            });
+        }
+        renderCareSet(); // 概要の選択肢が変わったら表示もクリア
+    }
+
 
     // ----------------------------------------
     // ★関数: タスク設定モーダルを開く
@@ -960,6 +1092,20 @@ document.addEventListener('DOMContentLoaded', () => {
             assignedBedBlock.textContent = selectedBeds.join(', ');
         }
 
+        // ★★★ 修正: 看護師名の表示（マーク含む）も更新する ★★★
+        const nurseNameBlocks = namesArea.querySelectorAll('.nurse-name-block');
+        nurseNameBlocks.forEach(block => {
+            // data-nurse-name 属性を使って、マークの有無に関わらず対象の要素を特定する
+            if (block.dataset.nurseName === editingNurseName) {
+                if (nurseLevelSelect.value === '新人') block.textContent = `🔰 ${editingNurseName}`;
+                else if (nurseLevelSelect.value === 'リーダー') block.textContent = `👑 ${editingNurseName}`;
+                else block.textContent = editingNurseName;
+            }
+        });
+
+        // ★★★ 修正: 設定変更後にヒートマップを即時更新する ★★★
+        updateHeatmap();
+
         closeNurseModal();
     });
 
@@ -967,38 +1113,109 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★関数: ヒートマップを更新する
     // ----------------------------------------
     function updateHeatmap() {
-        if (currentViewMode !== 'nurse') {
-            // 看護師ボード以外ではヒートマップをリセット
-            document.querySelectorAll('.nurse-name-block').forEach(el => el.style.backgroundColor = '');
-            return;
-        }
-
         const [hour, minute] = heatmapTimeInput.value.split(':').map(Number);
         const targetTime = new Date();
         targetTime.setHours(hour, minute, 0, 0);
-
+    
         const nurseNameBlocks = document.querySelectorAll('.nurse-name-block');
         nurseNameBlocks.forEach(block => {
-            const nurseName = block.textContent;
-            let workload = 0;
+            const nurseName = block.dataset.nurseName; // ★★★ 修正: data属性から純粋な名前を取得 ★★★
 
-            const tasksForNurse = placedTasks.filter(task =>
+            // 1. 担当患者の重症度合計とせん妄の有無を計算
+            let totalSeverity = 0;
+            let patientCount = 0;
+            let hasHighNeedsPatient = false; // ★せん妄 or 小児科系
+
+            // ★★★ 修正: 全看護師の設定から担当ベッドを取得する ★★★
+            // nurseSettingsは病棟に依存しないため、全データから直接参照する
+            const settings = nurseSettings[nurseName];
+            const assignedBeds = settings ? settings.assignedBeds : [];
+            // const assignedBeds = nurseSettings[nurseName]?.assignedBeds || [];
+
+
+
+    
+            for (const bedId of assignedBeds) {
+                const patient = patientData[bedId];
+                // 空床でなく、データが存在する場合のみ計算
+                if (patient && !patient.isEmpty) {
+                    patientCount++;
+                    totalSeverity += parseInt(patient.severity, 10);
+                    // ★★★ 修正: せん妄 or 小児科系患者がいるかチェック ★★★
+                    if (patient.delirium || patient.dept === '小児/小児外科' || patient.dept === '小児心外') {
+                        hasHighNeedsPatient = true;
+                    }
+                }
+            }
+    
+            // 2. 指定時刻のケア（タスク）数を計算
+            const careCount = placedTasks.filter(task =>
                 task.assignedNurses.includes(nurseName) &&
                 task.startTime <= targetTime &&
                 task.endTime > targetTime
-            );
+            ).length;
+    
+            // 3. 新しいルールに基づいてヒートマップレベルを決定
+            let level = 1; // デフォルトレベル
 
-            tasksForNurse.forEach(task => {
-                workload += (1 / task.assignedNurses.length); // 1人作業なら1, 2人作業なら0.5を加算
-            });
+            // ★★★ 修正: せん妄患者担当時の特別ルールを最優先で判定 ★★★
+            if (hasHighNeedsPatient && careCount === 0 && patientCount === 1) level = 3;
+            else if (hasHighNeedsPatient && careCount === 0 && patientCount === 2) level = 4;
 
-            // 業務量に応じた色を決定
-            const colors = ['#e6f5e6', '#ffffcc', '#ffe6b3', '#ffcc99', '#ffb380'];
-            const colorIndex = Math.min(Math.floor(workload), colors.length - 1);
-            block.style.backgroundColor = colors[colorIndex];
+            // レベル5 (要応援)
+            if ((totalSeverity >= 10 || hasHighNeedsPatient) && careCount >= 1) level = 5;
+            else if (totalSeverity >= 8 && totalSeverity <= 9 && careCount >= 2) level = 5;
+            else if (totalSeverity <= 7 && careCount >= 3) level = 5;
+            // レベル4
+            else if ((totalSeverity >= 10 || hasHighNeedsPatient) && careCount === 0) level = 4;
+            // レベル3 (標準)
+            else if (totalSeverity >= 8 && totalSeverity <= 9 && careCount === 1) level = 3;
+            else if (totalSeverity >= 5 && totalSeverity <= 7 && careCount === 2) level = 3;
+            // レベル2
+            else if (totalSeverity >= 5 && totalSeverity <= 7 && careCount === 1) level = 2;
+            else if (totalSeverity >= 1 && totalSeverity <= 4 && careCount === 2) level = 2;
+            // レベル1 (応援可)
+            else if (totalSeverity <= 7 && careCount === 0) level = 1;
+            else if (totalSeverity >= 1 && totalSeverity <= 4 && careCount === 1) level = 1;
+    
+            // 4. レベルに応じた色を適用
+            const colors = ['#e6f5e6', '#ffffcc', '#ffe6b3', '#ffcc99', '#ffb380']; // 1, 2, 3, 4, 5
+            block.style.backgroundColor = colors[level - 1];
+        });
+
+        // ★★★ ベッドマップのヒートマップ処理を追加 ★★★
+        const bedBoxes = document.querySelectorAll('.bed-box');
+        bedBoxes.forEach(box => {
+            const bedId = box.textContent;
+
+            const patient = patientData[bedId] || {}; // ★ patientが存在しない場合も考慮
+            if (patient.isEmpty) {
+                box.style.backgroundColor = '#e0e0e0'; // 空床の色はここで設定
+                return; // 空床なら以降の計算は不要
+            }
+            // ★★★ 修正: ヒートマップ計算時に通常色(#fff)にリセットしない ★★★
+            const severity = parseInt(patient.severity, 10);
+            // ★★★ 修正: せん妄 or 小児科系患者かチェック ★★★
+            const isHighNeedsPatient = patient.delirium || patient.dept === '小児/小児外科' || patient.dept === '小児心外';
+
+            const careCount = placedTasks.filter(task =>
+                task.assignedBed === bedId &&
+                task.startTime <= targetTime &&
+                task.endTime > targetTime
+            ).length;
+
+            let level = 1; // デフォルト
+            if ((severity === 5 && careCount >= 1) || (isHighNeedsPatient && careCount >= 1)) level = 5;
+            else if ((severity === 4 && careCount >= 1) || (severity === 5 && careCount === 0) || (isHighNeedsPatient && careCount === 0)) level = 4;
+            else if ((severity === 4 && careCount === 0) || (severity === 3 && careCount >= 1)) level = 3;
+            else if ((severity === 3 && careCount === 0) || (severity === 2 && careCount >= 1)) level = 2;
+            else if ((severity === 2 && careCount === 0) || severity === 1) level = 1;
+
+            const colors = ['#e6f5e6', '#ffffcc', '#ffe6b3', '#ffcc99', '#ffb380']; // 1, 2, 3, 4, 5
+            box.style.backgroundColor = colors[level - 1];
         });
     }
-
+    
     // ----------------------------------------
     // ★関数: 患者情報モーダルを開く
     // ----------------------------------------
@@ -1153,6 +1370,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★★★ 関数: ケアセットのドラッグを開始 ★★★
+    // ----------------------------------------
+    function handleCareSetDrag(e, shift) {
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+
+        if (!selectedDept || !selectedSummary) return;
+
+        const taskSet = careSets[selectedDept]?.[selectedSummary]?.[shift];
+        if (!taskSet) return;
+
+        // カテゴリ情報を付与して送信
+        const tasksWithCategory = taskSet.map(task => {
+            for (const category in careTasks) {
+                if (careTasks[category].items.some(item => item.name === task.name)) {
+                    return { ...task, category };
+                }
+            }
+            return task; // 見つからない場合
+        });
+
+        const dataToSend = {
+            shift: shift,
+            tasks: tasksWithCategory
+        };
+
+        e.dataTransfer.setData('application/json', JSON.stringify(dataToSend));
+    }
+
+    // ----------------------------------------
+    // ★★★ 関数: 選択されたケアセットを表示 ★★★
+    // ----------------------------------------
+    function renderCareSet() {
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const set = careSets[selectedDept]?.[selectedSummary];
+
+        careSetAmList.innerHTML = set?.am.map(t => `<div>${t.startTime} ${t.name}</div>`).join('') || '（データなし）';
+        careSetPmList.innerHTML = set?.pm.map(t => `<div>${t.startTime} ${t.name}</div>`).join('') || '（データなし）';
+    }
+
+
+
+    // ----------------------------------------
     // ★関数: タスク要素を生成してDOMに追加
     // ----------------------------------------
     function createTaskElement(task, parentRow, left, width) {
@@ -1163,6 +1424,11 @@ document.addEventListener('DOMContentLoaded', () => {
         taskEl.style.left = `${left}px`;
         taskEl.style.width = `${width}px`;
         taskEl.textContent = task.name;
+
+        // ★★★ 修正: 人員不足の場合に警告スタイルを適用 ★★★
+        if (task.isUnderstaffed) {
+            taskEl.classList.add('understaffed');
+        }
 
         // ★タスクブロックをドラッグ可能にする
         taskEl.draggable = true;
@@ -1281,10 +1547,15 @@ document.addEventListener('DOMContentLoaded', () => {
             patientSummaryHeader.textContent = '患者概要';
             namesArea.style.width = ''; // CSSで定義された元の幅に戻す
             renderBedBoard(currentWard);
+            // ★ベッドボード表示の時だけケアセットプランナーを表示
+            careSetContainer.classList.remove('care-set-container-hidden');
         }
 
         // ★ボード描画後に、配置済みタスクも描画する
         renderAllTasks();
+        // ★★★ 修正: ボードとタスクの描画が完了した後にヒートマップを更新 ★★★
+        updatePatientDisplayForAllBeds(); // まず患者概要を更新
+        updateHeatmap(); // 次にヒートマップを計算・適用
     }
 
     // ----------------------------------------
@@ -1343,6 +1614,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★関数: 全ベッドの患者情報表示を更新
+    // ----------------------------------------
+    function updatePatientDisplayForAllBeds() {
+        const allBedIds = [...generateBedList(beds.north), ...generateBedList(beds.south)];
+        allBedIds.forEach(bedId => {
+            updatePatientDisplay(bedId);
+        });
+    }
+
+    // ----------------------------------------
     // 関数: 画面全体を更新
     // ----------------------------------------
     function updateDisplay() {
@@ -1358,6 +1639,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentViewMode = 'nurse';
         btnNurseBoard.classList.add('active');
         btnBedBoard.classList.remove('active');
+        // ★看護師ボードではケアセットプランナーを非表示
+        careSetContainer.classList.add('care-set-container-hidden');
         updateDisplay();
     });
 
@@ -1415,15 +1698,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ★ヒートマップの時刻が変更されたら5分単位に丸める
+    // ★ヒートマップの時刻が変更されたら5分単位に丸める（自動更新はしない）
     heatmapTimeInput.addEventListener('change', () => {
         const [hour, minute] = heatmapTimeInput.value.split(':').map(Number);
         const roundedMinute = Math.round(minute / 5) * 5;
-        
         const newDate = new Date();
         newDate.setHours(hour, roundedMinute, 0, 0);
-
         heatmapTimeInput.value = `${String(newDate.getHours()).padStart(2, '0')}:${String(newDate.getMinutes()).padStart(2, '0')}`;
+    });
+    // ★ヒートマップの「表示」ボタンが押されたら更新
+    btnUpdateHeatmap.addEventListener('click', () => {
         updateHeatmap(); // ★ヒートマップを更新
     });
 
@@ -1435,6 +1719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDisplay();
     initializeCareTabs(); // ★ケアリストのタブを初期化
     renderCareList(currentCareCategory); // ★ケアリストの初期描画
+    initializeCareSetPlanner(); // ★ケアセットプランナーを初期化
 
     // ★初期の病棟選択状態をスタイルに反映
     northWardRow.classList.add('active');

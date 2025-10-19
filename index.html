@@ -75,6 +75,28 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ▼▼▼ ケアセットコンテナを追加 ▼▼▼ -->
+            <div id="care-set-container" class="care-set-container-hidden">
+                <div class="care-set-header">
+                    <h4>&#x1F4DC; ケアセットプランナー(未実装)</h4>
+                    <div class="care-set-selectors">
+                        <select id="care-set-dept-select"></select>
+                        <select id="care-set-summary-select"></select>
+                    </div>
+                </div>
+                <div class="care-set-body">
+                    <div id="care-set-am" class="care-set-group" draggable="true">
+                        <h5>午前のケアセット</h5>
+                        <div id="care-set-am-list" class="care-set-list"></div>
+                    </div>
+                    <div id="care-set-pm" class="care-set-group" draggable="true">
+                        <h5>午後のケアセット</h5>
+                        <div id="care-set-pm-list" class="care-set-list"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ▲▲▲ ケアセットコンテナを追加 ▲▲▲ -->
         </div>
         <!-- ▲▲▲ ここまでメインパネル ▲▲▲ -->
 
@@ -86,13 +108,14 @@
                 <div class="time-selector">
                     <label for="heatmap-time">表示時刻:</label>
                     <input type="time" id="heatmap-time" name="heatmap-time" value="08:00" step="300">
+                    <button id="btn-update-heatmap">表示</button>
                 </div>
                 <div class="heatmap-legend">
-                    <div class="legend-item" style="background-color: #e6f5e6;">応援可</div>
-                    <div class="legend-item" style="background-color: #ffffcc;"></div>
-                    <div class="legend-item" style="background-color: #ffe6b3;">標準</div>
-                    <div class="legend-item" style="background-color: #ffcc99;"></div>
-                    <div class="legend-item" style="background-color: #ffb380;">要応援</div>
+                    <div class="legend-item" style="background-color: #e6f5e6;">1: 応援可</div>
+                    <div class="legend-item" style="background-color: #ffffcc;">2</div>
+                    <div class="legend-item" style="background-color: #ffe6b3;">3: 標準</div>
+                    <div class="legend-item" style="background-color: #ffcc99;">4</div>
+                    <div class="legend-item" style="background-color: #ffb380;">5: 要応援</div>
                 </div>
             </div>
 
