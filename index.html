@@ -87,6 +87,13 @@
                     <label for="heatmap-time">表示時刻:</label>
                     <input type="time" id="heatmap-time" name="heatmap-time" value="08:00" step="300">
                 </div>
+                <div class="heatmap-legend">
+                    <div class="legend-item" style="background-color: #e6f5e6;">応援可</div>
+                    <div class="legend-item" style="background-color: #ffffcc;"></div>
+                    <div class="legend-item" style="background-color: #ffe6b3;">標準</div>
+                    <div class="legend-item" style="background-color: #ffcc99;"></div>
+                    <div class="legend-item" style="background-color: #ffb380;">要応援</div>
+                </div>
             </div>
 
             <div class="care-list-container">
@@ -151,17 +158,19 @@
                             <option>消内</option>
                             <option>他内科</option>
                             <option>皮膚科/形成外科</option>
+                            <option>小児/小児外科</option>
+                            <option>小児心外</option>
                             <option>その他</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="patient-severity">重症度</label>
                         <select id="patient-severity">
-                            <option value="1">1</option>
+                            <option value="1">1 (軽症)</option>
                             <option value="2">2</option>
-                            <option value="3">3</option>
+                            <option value="3">3 (標準)</option>
                             <option value="4">4</option>
-                            <option value="5">5</option>
+                            <option value="5">5 (重症)</option>
                         </select>
                     </div>
                     <div class="form-group checkbox-group">
@@ -189,6 +198,29 @@
                     <div class="form-group checkbox-group"><input type="checkbox" id="patient-admission-plan"><label for="patient-admission-plan">入室予定</label><input type="time" id="patient-admission-time" class="plan-time-hidden"></div>
                 </div>
                 <div class="modal-actions"><button type="submit">決定</button><button type="button" id="patient-modal-cancel">キャンセル</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ▼▼▼ 看護師設定モーダル ▼▼▼ -->
+    <div id="nurse-modal-overlay" class="modal-hidden">
+        <div id="nurse-modal">
+            <h2 id="nurse-modal-title">看護師設定</h2>
+            <form id="nurse-form">
+                <div class="form-group">
+                    <label for="nurse-level">看護師レベル</label>
+                    <select id="nurse-level">
+                        <option>新人</option>
+                        <option>フリージア</option>
+                        <option>非リーダー</option>
+                        <option>リーダー</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>基本担当ベッド (最大3つ)</label>
+                    <div id="nurse-bed-list" class="modal-checkbox-list"></div>
+                </div>
+                <div class="modal-actions"><button type="submit">決定</button><button type="button" id="nurse-modal-cancel">キャンセル</button></div>
             </form>
         </div>
     </div>

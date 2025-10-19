@@ -68,6 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const patientSummarySelect = document.getElementById('patient-summary-select');
     const patientSummaryText = document.getElementById('patient-summary-text');
 
+    // 看護師設定モーダル要素
+    const nurseModalOverlay = document.getElementById('nurse-modal-overlay');
+    const nurseModalTitle = document.getElementById('nurse-modal-title');
+    const nurseForm = document.getElementById('nurse-form');
+    const nurseModalCancelBtn = document.getElementById('nurse-modal-cancel');
+    const nurseLevelSelect = document.getElementById('nurse-level');
+    const nurseBedList = document.getElementById('nurse-bed-list');
+
 
 
     // ----------------------------------------
@@ -165,7 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
         '消内': ['消化管出血', '肝不全', '敗血症性ショック', '膵炎'],
         '他内科': ['敗血症性ショック'],
         '皮膚科/形成外科': ['壊死性筋膜炎', '熱傷'],
-        'その他': []
+        'その他': [],
+        '小児/小児外科': ['<1歳', '1-3歳', '4-6歳', '7歳以上'],
+        '小児心外': ['<1歳', '1-3歳', '4-6歳', '7歳以上'],
     };
     const OTHER_SUMMARY_OPTION = 'その他（自由記述）';
 
@@ -190,6 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ★患者情報編集中に対象のベッドIDを保持
     let editingBedId = null;
+
+    // ★看護師ごとの設定を管理
+    let nurseSettings = {};
+
+    // ★看護師設定編集中に対象の看護師名を保持
+    let editingNurseName = null;
 
     let currentCareCategory = 'care'; // ★ケアリストの現在のカテゴリ
 
@@ -268,6 +284,16 @@ document.addEventListener('DOMContentLoaded', () => {
             nameBlock.classList.add('nurse-name-block');
             nameBlock.textContent = name;
             namesArea.appendChild(nameBlock);
+            nameBlock.addEventListener('click', () => openNurseModal(name));
+
+            // ★基本担当ベッド表示欄を追加
+            const assignedBedBlock = document.createElement('div');
+            assignedBedBlock.classList.add('nurse-assigned-beds-block');
+            assignedBedBlock.id = `nurse-${name}-beds`;
+            assignedBedBlock.textContent = nurseSettings[name]?.assignedBeds.join(', ') || '';
+            patientSummaryArea.appendChild(assignedBedBlock);
+
+            updateHeatmap(); // ★ヒートマップを更新
 
             const rowGroup = document.createElement('div');
             rowGroup.classList.add('nurse-row-group');
@@ -865,6 +891,115 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★関数: 看護師設定モーダルを開く
+    // ----------------------------------------
+    function openNurseModal(nurseName) {
+        editingNurseName = nurseName;
+        nurseModalTitle.textContent = `${nurseName} - 設定`;
+
+        // 既存データをフォームに反映
+        const settings = nurseSettings[nurseName] || {};
+        nurseLevelSelect.value = settings.level || '新人';
+
+        // ベッドのチェックボックスを生成
+        nurseBedList.innerHTML = '';
+        const bedConfig = beds[currentWard];
+        const bedList = generateBedList(bedConfig);
+        bedList.forEach(bedId => {
+            const isChecked = settings.assignedBeds?.includes(bedId) ? 'checked' : '';
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('modal-checkbox-item');
+            itemDiv.innerHTML = `
+                <input type="checkbox" id="nurse-bed-${bedId}" name="nurse-beds" value="${bedId}" ${isChecked}>
+                <label for="nurse-bed-${bedId}">${bedId}</label>
+            `;
+            nurseBedList.appendChild(itemDiv);
+        });
+
+        nurseModalOverlay.classList.remove('modal-hidden');
+    }
+
+    // ----------------------------------------
+    // ★関数: 看護師設定モーダルを閉じる
+    // ----------------------------------------
+    function closeNurseModal() {
+        nurseModalOverlay.classList.add('modal-hidden');
+        nurseForm.reset();
+        editingNurseName = null;
+    }
+
+    // ----------------------------------------
+    // ★イベントリスナー: 看護師設定モーダル
+    // ----------------------------------------
+    nurseModalCancelBtn.addEventListener('click', closeNurseModal);
+    nurseModalOverlay.addEventListener('click', (e) => {
+        if (e.target === nurseModalOverlay) {
+            closeNurseModal();
+        }
+    });
+
+    nurseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!editingNurseName) return;
+
+        const selectedBeds = Array.from(nurseBedList.querySelectorAll('input:checked')).map(el => el.value);
+
+        if (selectedBeds.length > 3) {
+            alert('基本担当ベッドは3つまでしか選択できません。');
+            return;
+        }
+
+        nurseSettings[editingNurseName] = {
+            level: nurseLevelSelect.value,
+            assignedBeds: selectedBeds
+        };
+
+        // 表示を更新
+        const assignedBedBlock = document.getElementById(`nurse-${editingNurseName}-beds`);
+        if (assignedBedBlock) {
+            assignedBedBlock.textContent = selectedBeds.join(', ');
+        }
+
+        closeNurseModal();
+    });
+
+    // ----------------------------------------
+    // ★関数: ヒートマップを更新する
+    // ----------------------------------------
+    function updateHeatmap() {
+        if (currentViewMode !== 'nurse') {
+            // 看護師ボード以外ではヒートマップをリセット
+            document.querySelectorAll('.nurse-name-block').forEach(el => el.style.backgroundColor = '');
+            return;
+        }
+
+        const [hour, minute] = heatmapTimeInput.value.split(':').map(Number);
+        const targetTime = new Date();
+        targetTime.setHours(hour, minute, 0, 0);
+
+        const nurseNameBlocks = document.querySelectorAll('.nurse-name-block');
+        nurseNameBlocks.forEach(block => {
+            const nurseName = block.textContent;
+            let workload = 0;
+
+            const tasksForNurse = placedTasks.filter(task =>
+                task.assignedNurses.includes(nurseName) &&
+                task.startTime <= targetTime &&
+                task.endTime > targetTime
+            );
+
+            tasksForNurse.forEach(task => {
+                workload += (1 / task.assignedNurses.length); // 1人作業なら1, 2人作業なら0.5を加算
+            });
+
+            // 業務量に応じた色を決定
+            const colors = ['#e6f5e6', '#ffffcc', '#ffe6b3', '#ffcc99', '#ffb380'];
+            const colorIndex = Math.min(Math.floor(workload), colors.length - 1);
+            block.style.backgroundColor = colors[colorIndex];
+        });
+    }
+
+    // ----------------------------------------
     // ★関数: 患者情報モーダルを開く
     // ----------------------------------------
     function openPatientModal(bedId) {
@@ -1136,14 +1271,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (currentViewMode === 'nurse') {
             // ★看護師ボードでは患者概要列を非表示にし、名前列の幅を広げてタイムラインの位置を維持
-            patientSummaryArea.style.display = 'none';
-            const namesAreaWidth = getComputedStyle(document.documentElement).getPropertyValue('--names-area-width');
-            const summaryWidth = getComputedStyle(document.documentElement).getPropertyValue('--patient-summary-width');
-            namesArea.style.width = `calc(${namesAreaWidth} + ${summaryWidth})`;
+            patientSummaryArea.style.display = 'block';
+            patientSummaryHeader.textContent = '基本担当ベッド';
+            namesArea.style.width = ''; // 元の幅に戻す
             renderNurseBoard(currentWard);
         } else {
             // ★ベッドボードでは両方の列を表示
             patientSummaryArea.style.display = 'block';
+            patientSummaryHeader.textContent = '患者概要';
             namesArea.style.width = ''; // CSSで定義された元の幅に戻す
             renderBedBoard(currentWard);
         }
@@ -1289,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newDate.setHours(hour, roundedMinute, 0, 0);
 
         heatmapTimeInput.value = `${String(newDate.getHours()).padStart(2, '0')}:${String(newDate.getMinutes()).padStart(2, '0')}`;
-        // TODO: ここでヒートマップを更新する関数を呼び出す
+        updateHeatmap(); // ★ヒートマップを更新
     });
 
 
