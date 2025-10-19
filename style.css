@@ -11,6 +11,13 @@ body {
     --col-width-5min: 8px; 
     --col-width-10min: calc(var(--col-width-5min) * 2);
     --row-height: 24px; 
+
+    /* ★ヘッダーの高さを変数で一元管理 */
+    --header-hour-height: 27px; /* padding(5*2) + font-size(16) + border(1) */
+    --header-minute-height: 21.5px; /* font-size(10) + α */
+    --header-total-height: calc(var(--header-hour-height) + var(--header-minute-height));
+
+    --patient-summary-width: 75px; /* ★患者概要列の幅を定義 */
     --names-area-width: 100px;
 
     /* ▼▼▼ カテゴリごとの色を定義 ▼▼▼ */
@@ -48,20 +55,29 @@ body {
     border: 1px solid #ccc;
     background-color: #fff;
 }
+.left-column-group {
+    display: flex;
+    flex-shrink: 0; /* 縮まないように */
+}
 .names-area {
     width: var(--names-area-width);
     flex-shrink: 0; /* 縮まないように */
     border-right: 1px solid #ccc;
     box-sizing: border-box;
 }
+/* ★患者概要エリア */
+.patient-summary-area {
+    width: var(--patient-summary-width);
+    flex-shrink: 0;
+    border-right: 1px solid #ccc;
+}
 .timeline-area {
-    /* 中身に合わせて幅が決まるように、特に指定しない */
+    overflow-x: auto; /* ★横スクロールをここに設定 */
+    flex-grow: 1;
 }
 
 /* タイムライン全体 (★横スクロールをtimeline-areaに移管) */
 .timeline-container {
-    display: inline-block; /* ★スクロールのために必要 */
-    overflow-x: auto; /* ★ここにスクロールを追加 */
 }
 
 /* 時間ヘッダー (8時... と 0 10 20...) */
@@ -69,16 +85,27 @@ body {
     border-bottom: 2px solid #aaa;
     background-color: #f9f9f9;
     
-    /* ★左の名前エリア幅に合わせて左に余白を作る */
-    /* padding-left: var(--names-area-width); */
-    /* ↑この方法はスクロール時にずれるため、names-area側で調整 */
+    /* ★スクロール時にヘッダーを固定する */
+    position: sticky;
+    top: 0;
+    z-index: 20; /* 他の要素より手前に */
 }
 
 /* ★左側：名前エリアのヘッダー高さ合わせ用 */
 .names-header-spacer {
-    height: 48.5px;  /* ★削除 (JSで設定する) */
+    height: var(--header-total-height);
     border-bottom: 2px solid #aaa;
     background-color: #f9f9f9;
+}
+/* ★患者概要エリアのヘッダー */
+.patient-summary-header {
+    height: var(--header-total-height);
+    border-bottom: 2px solid #aaa;
+    background-color: #f9f9f9;
+    border-left: 1px solid #ccc;
+    display: flex; /* 文字を中央揃えにするため */
+    align-items: center;
+    justify-content: center;
 }
 
 /* ★左側：看護師名 */
@@ -92,6 +119,7 @@ body {
     box-sizing: border-box;
     display: flex;
     align-items: center;
+    cursor: pointer;
 }
 /* ▼▼▼ ここから追加 ▼▼▼ */
 /* ベッドボード用の名前ブロック（1行の高さ） */
@@ -105,24 +133,38 @@ body {
     display: flex;
     align-items: center;
     justify-content: center; /* 中央揃え */
+    cursor: pointer;
+}
+/* ★患者概要ブロック */
+.patient-summary-block {
+    height: var(--row-height);
+    padding: 5px;
+    font-size: 12px;
+    border-bottom: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
 }
 /* ▲▲▲ ここまで追加 ▲▲▲ */
 
 
 .time-row {
     display: flex; 
+    box-sizing: border-box;
 }
 .hour-row {
     border-bottom: 1px solid #ccc;
+    height: var(--header-hour-height);
 }
 .hour-block {
     width: calc(var(--col-width-10min) * 6); 
     text-align: center;
-    padding: 5px 0;
     font-weight: bold;
     font-size: 16px;
     border-right: 1px solid #ccc;
     box-sizing: border-box; 
+    line-height: var(--header-hour-height);
 }
 .minute-row { } /* 警告対策（削除してもOK） */
 .minute-block {
@@ -132,6 +174,7 @@ body {
     color: #555;
     border-right: 1px dotted #ddd; 
     box-sizing: border-box;
+    line-height: var(--header-minute-height);
 }
 .minute-block.half-hour {
     border-right: 1px solid #bbb;
@@ -385,6 +428,7 @@ body {
     font-weight: bold;
     flex-shrink: 0;
 }
+.bed-box:hover { background-color: #f0f0f0; cursor: pointer; }
 
 /* ▲▲▲ ここまで病棟関連のスタイルを追加 ▲▲▲ */
 
@@ -393,7 +437,8 @@ body {
     display: none !important; /* 表示を確実に消す */
 }
 
-#modal-overlay {
+#modal-overlay,
+#patient-modal-overlay { /* ★患者情報モーダルにも適用 */
     position: fixed;
     top: 0;
     left: 0;
@@ -511,3 +556,63 @@ body {
 .task-block[data-category="break"] { background-color: var(--color-break); border-color: #98b898; }
 
 /* ▲▲▲ タイムライン上のタスクブロックのスタイル ▲▲▲ */
+
+/* ▼▼▼ 患者情報モーダルのスタイル ▼▼▼ */
+#patient-modal {
+    background-color: #fff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    width: 500px;
+}
+#patient-modal h2 {
+    margin-top: 0;
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 25px;
+}
+.form-row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+.form-row .form-group {
+    flex-grow: 1;
+}
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+.checkbox-group label {
+    margin-bottom: 0;
+}
+.device-checks {
+    justify-content: space-around;
+    padding: 10px 0;
+}
+.plan-group {
+    justify-content: space-between;
+}
+.plan-time-hidden {
+    visibility: hidden;
+}
+#patient-modal textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: sans-serif;
+    font-size: 14px;
+    padding: 5px;
+}
+#patient-modal select, #patient-modal input[type="text"], #patient-modal input[type="time"] {
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+}
+/* 患者概要の自由記述欄 */
+#patient-summary-text {
+    display: none; /* 初期状態は非表示 */
+    margin-top: 5px;
+}
+/* ▲▲▲ 患者情報モーダルのスタイル ▲▲▲ */

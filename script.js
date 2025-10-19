@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const timelineBody = document.querySelector('.timeline-body');
     const namesArea = document.querySelector('.names-area');
     const namesHeaderSpacer = document.querySelector('.names-header-spacer');
+    const patientSummaryArea = document.querySelector('.patient-summary-area');
+    const patientSummaryHeader = document.querySelector('.patient-summary-header');
     
     const btnAm = document.getElementById('btn-am');
     const btnPm = document.getElementById('btn-pm');
@@ -43,6 +45,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const timelineArea = document.querySelector('.timeline-area');
     const heatmapTimeInput = document.getElementById('heatmap-time');
     const trashCan = document.getElementById('trash-can');
+
+    // 患者情報モーダル要素
+    const patientModalOverlay = document.getElementById('patient-modal-overlay');
+    const patientModalTitle = document.getElementById('patient-modal-title');
+    const patientForm = document.getElementById('patient-form');
+    const patientModalCancelBtn = document.getElementById('patient-modal-cancel');
+    const patientIsEmpty = document.getElementById('patient-is-empty');
+    const patientDept = document.getElementById('patient-dept');
+    const patientSeverity = document.getElementById('patient-severity');
+    const patientSummary = document.getElementById('patient-summary');
+    const patientVent = document.getElementById('patient-vent');
+    const patientPurification = document.getElementById('patient-purification');
+    const patientAssist = document.getElementById('patient-assist');
+    const patientDelirium = document.getElementById('patient-delirium');
+    const patientMobility = document.getElementById('patient-mobility');
+    const patientDischargePlan = document.getElementById('patient-discharge-plan');
+    const patientDischargeTime = document.getElementById('patient-discharge-time');
+    const patientAdmissionPlan = document.getElementById('patient-admission-plan');
+    const patientAdmissionTime = document.getElementById('patient-admission-time');
+    // ★患者概要の新しい要素
+    const patientSummarySelect = document.getElementById('patient-summary-select');
+    const patientSummaryText = document.getElementById('patient-summary-text');
+
 
 
     // ----------------------------------------
@@ -125,6 +150,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ★科と患者概要のデータを追加
+    const departmentSummaries = {
+        '呼外': ['VATS'],
+        '心外': ['開胸術後', 'TEVAR/EVAR'],
+        '脳外': ['SAH', '血栓回収', '脳腫瘍'],
+        '肝外': ['肝移植', 'PD/肝切'],
+        '消外': ['食道', 'パンペリ'],
+        '泌尿器': ['腎移植', 'RARC'],
+        '産婦': ['子宮体癌/卵巣癌', '産科緊急'],
+        '脊外': ['TES'],
+        '救急': ['中毒', '外傷', '熱傷'],
+        '循内': ['AMI', 'TAVI/Mitra clip', '心不全', '心原性ショック'],
+        '消内': ['消化管出血', '肝不全', '敗血症性ショック', '膵炎'],
+        '他内科': ['敗血症性ショック'],
+        '皮膚科/形成外科': ['壊死性筋膜炎', '熱傷'],
+        'その他': []
+    };
+    const OTHER_SUMMARY_OPTION = 'その他（自由記述）';
+
     // ----------------------------------------
     // 状態管理
     // ----------------------------------------
@@ -141,6 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★編集中のタスクIDを保持する変数
     let editingTaskId = null;
 
+    // ★患者情報をベッドごとに管理
+    let patientData = {};
+
+    // ★患者情報編集中に対象のベッドIDを保持
+    let editingBedId = null;
+
     let currentCareCategory = 'care'; // ★ケアリストの現在のカテゴリ
 
     // ----------------------------------------
@@ -153,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bedBox = document.createElement('div');
             bedBox.classList.add('bed-box');
             bedBox.textContent = bedName;
+            bedBox.addEventListener('click', () => openPatientModal(bedName));
             southBedsDisplay.appendChild(bedBox);
         });
 
@@ -162,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bedBox = document.createElement('div');
             bedBox.classList.add('bed-box');
             bedBox.textContent = bedName;
+            bedBox.addEventListener('click', () => openPatientModal(bedName));
             northBedsDisplay.appendChild(bedBox);
         });
     }
@@ -253,7 +305,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const nameBlock = document.createElement('div');
             nameBlock.classList.add('bed-name-block');
             nameBlock.textContent = name;
+            nameBlock.addEventListener('click', () => openPatientModal(name));
             namesArea.appendChild(nameBlock);
+
+            // ★患者サマリー欄を追加
+            const summaryBlock = document.createElement('div');
+            summaryBlock.classList.add('patient-summary-block');
+            summaryBlock.id = `bed${name}-summary`;
+            summaryBlock.textContent = ``; // 空欄にする
+            patientSummaryArea.appendChild(summaryBlock);
 
             const rowGroup = document.createElement('div');
             rowGroup.classList.add('bed-row-group');
@@ -805,6 +865,159 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★関数: 患者情報モーダルを開く
+    // ----------------------------------------
+    function openPatientModal(bedId) {
+        editingBedId = bedId;
+        patientModalTitle.textContent = `ベッド ${bedId} - 情報編集`;
+
+        // 既存のデータをフォームに反映
+        const data = patientData[bedId] || {};
+        patientIsEmpty.checked = data.isEmpty || false;
+        patientDept.value = data.dept || Object.keys(departmentSummaries)[0]; // デフォルトはリストの先頭
+        patientSeverity.value = data.severity || 1;
+        patientVent.checked = data.vent || false;
+
+        updateSummaryOptions(patientDept.value, data.summary); // ★患者概要の選択肢を更新
+
+        patientPurification.checked = data.purification || false;
+        patientAssist.checked = data.assist || false;
+        patientDelirium.checked = data.delirium || false;
+        patientMobility.value = data.mobility || '床上';
+        patientDischargePlan.checked = data.dischargePlan || false;
+        patientDischargeTime.value = data.dischargeTime || '';
+        patientAdmissionPlan.checked = data.admissionPlan || false;
+        patientAdmissionTime.value = data.admissionTime || '';
+
+        // チェックボックスの状態に応じて時間入力の表示を切り替え
+        patientDischargeTime.style.visibility = patientDischargePlan.checked ? 'visible' : 'hidden';
+        patientAdmissionTime.style.visibility = patientAdmissionPlan.checked ? 'visible' : 'hidden';
+
+        patientModalOverlay.classList.remove('modal-hidden');
+    }
+
+    // ----------------------------------------
+    // ★関数: 患者情報モーダルを閉じる
+    // ----------------------------------------
+    function closePatientModal() {
+        patientModalOverlay.classList.add('modal-hidden');
+        patientForm.reset();
+        editingBedId = null;
+    }
+
+    // ----------------------------------------
+    // ★関数: 患者情報の表示を更新
+    // ----------------------------------------
+    function updatePatientDisplay(bedId) {
+        const data = patientData[bedId] || {};
+        
+        // 1. ベッドボードのサマリー欄を更新
+        const summaryBlock = document.getElementById(`bed${bedId}-summary`);
+        if (summaryBlock) {
+            if (data.isEmpty) {
+                summaryBlock.textContent = '空床';
+            } else {
+                // ★概要と科を両方表示
+                const deptText = data.dept ? `[${data.dept}] ` : '';
+                const summaryText = data.summary || '';
+                summaryBlock.textContent = `${deptText}${summaryText}`;
+                summaryBlock.title = summaryBlock.textContent; // 全文をツールチップで表示
+            }
+        }
+
+        // 2. 上部ベッドマップの表示を更新
+        const allBedBoxes = document.querySelectorAll('.bed-box');
+        allBedBoxes.forEach(box => {
+            if (box.textContent === bedId) {
+                box.style.backgroundColor = data.isEmpty ? '#e0e0e0' : '#fff';
+                // ここで重症度に応じて色を変えるなどの処理も追加できる
+            }
+        });
+    }
+
+    // ----------------------------------------
+    // ★イベントリスナー: 患者情報モーダル
+    // ----------------------------------------
+    patientModalCancelBtn.addEventListener('click', closePatientModal);
+    patientModalOverlay.addEventListener('click', (e) => {
+        if (e.target === patientModalOverlay) {
+            closePatientModal();
+        }
+    });
+
+    patientDischargePlan.addEventListener('change', () => {
+        patientDischargeTime.style.visibility = patientDischargePlan.checked ? 'visible' : 'hidden';
+    });
+    patientAdmissionPlan.addEventListener('change', () => {
+        patientAdmissionTime.style.visibility = patientAdmissionPlan.checked ? 'visible' : 'hidden';
+    });
+
+    // ★科が変更されたら、患者概要の選択肢を更新
+    patientDept.addEventListener('change', () => {
+        updateSummaryOptions(patientDept.value);
+    });
+
+    // ★患者概要の選択が変更されたら、自由記述欄の表示を切り替え
+    patientSummarySelect.addEventListener('change', () => {
+        patientSummaryText.style.display = (patientSummarySelect.value === OTHER_SUMMARY_OPTION) ? 'block' : 'none';
+    });
+
+    patientForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!editingBedId) return;
+
+        // ★患者概要の値を取得
+        const summaryValue = (patientSummarySelect.value === OTHER_SUMMARY_OPTION) ? patientSummaryText.value : patientSummarySelect.value;
+
+        // フォームからデータを収集して保存
+        patientData[editingBedId] = {
+            isEmpty: patientIsEmpty.checked,
+            dept: patientDept.value,
+            severity: patientSeverity.value,
+            summary: summaryValue,
+            vent: patientVent.checked,
+            purification: patientPurification.checked,
+            assist: patientAssist.checked,
+            delirium: patientDelirium.checked,
+            mobility: patientMobility.value,
+            dischargePlan: patientDischargePlan.checked,
+            dischargeTime: patientDischargeTime.value,
+            admissionPlan: patientAdmissionPlan.checked,
+            admissionTime: patientAdmissionTime.value,
+        };
+
+        updatePatientDisplay(editingBedId);
+        closePatientModal();
+    });
+
+    // ----------------------------------------
+    // ★関数: 患者概要の選択肢を更新する
+    // ----------------------------------------
+    function updateSummaryOptions(selectedDept, currentSummary = '') {
+        patientSummarySelect.innerHTML = '';
+        const summaries = departmentSummaries[selectedDept] || [];
+
+        summaries.forEach(summary => {
+            const option = document.createElement('option');
+            option.value = summary;
+            option.textContent = summary;
+            patientSummarySelect.appendChild(option);
+        });
+
+        // 自由記述の選択肢を追加
+        const otherOption = document.createElement('option');
+        otherOption.value = OTHER_SUMMARY_OPTION;
+        otherOption.textContent = OTHER_SUMMARY_OPTION;
+        patientSummarySelect.appendChild(otherOption);
+
+        // 既存データの復元
+        const isPredefined = summaries.includes(currentSummary);
+        patientSummarySelect.value = isPredefined ? currentSummary : OTHER_SUMMARY_OPTION;
+        patientSummaryText.value = isPredefined ? '' : currentSummary;
+        patientSummaryText.style.display = (patientSummarySelect.value === OTHER_SUMMARY_OPTION) ? 'block' : 'none';
+    }
+
+    // ----------------------------------------
     // ★関数: タスク要素を生成してDOMに追加
     // ----------------------------------------
     function createTaskElement(task, parentRow, left, width) {
@@ -917,11 +1130,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // 既存の内容をクリア
         namesArea.innerHTML = '';
         namesArea.appendChild(namesHeaderSpacer);
+        patientSummaryArea.innerHTML = ''; // サマリーエリアをクリア
+        patientSummaryArea.appendChild(patientSummaryHeader); // ヘッダーは再追加
         timelineBody.innerHTML = '';
 
         if (currentViewMode === 'nurse') {
+            // ★看護師ボードでは患者概要列を非表示にし、名前列の幅を広げてタイムラインの位置を維持
+            patientSummaryArea.style.display = 'none';
+            const namesAreaWidth = getComputedStyle(document.documentElement).getPropertyValue('--names-area-width');
+            const summaryWidth = getComputedStyle(document.documentElement).getPropertyValue('--patient-summary-width');
+            namesArea.style.width = `calc(${namesAreaWidth} + ${summaryWidth})`;
             renderNurseBoard(currentWard);
         } else {
+            // ★ベッドボードでは両方の列を表示
+            patientSummaryArea.style.display = 'block';
+            namesArea.style.width = ''; // CSSで定義された元の幅に戻す
             renderBedBoard(currentWard);
         }
 

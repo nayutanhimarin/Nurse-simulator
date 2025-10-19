@@ -57,8 +57,13 @@
             </div>
 
             <div class="schedule-board-container">
-                <div class="names-area">
-                    <div class="names-header-spacer"></div>
+                <div class="left-column-group">
+                    <div class="names-area">
+                        <div class="names-header-spacer"></div>
+                    </div>
+                    <div class="patient-summary-area">
+                        <div class="patient-summary-header">患者概要</div>
+                    </div>
                 </div>
                 <div class="timeline-area">
                     <div class="timeline-container">
@@ -120,6 +125,70 @@
                     <button type="submit" id="modal-confirm-btn">決定</button>
                     <button type="button" id="modal-cancel-btn">キャンセル</button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ▼▼▼ 患者情報モーダル ▼▼▼ -->
+    <div id="patient-modal-overlay" class="modal-hidden">
+        <div id="patient-modal">
+            <h2 id="patient-modal-title">ベッド情報編集</h2>
+            <form id="patient-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="patient-dept">科</label>
+                        <select id="patient-dept">
+                            <option>呼外</option>
+                            <option>心外</option>
+                            <option>脳外</option>
+                            <option>肝外</option>
+                            <option>消外</option>
+                            <option>泌尿器</option>
+                            <option>産婦</option>
+                            <option>脊外</option>
+                            <option>救急</option>
+                            <option>循内</option>
+                            <option>消内</option>
+                            <option>他内科</option>
+                            <option>皮膚科/形成外科</option>
+                            <option>その他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient-severity">重症度</label>
+                        <select id="patient-severity">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="patient-is-empty">
+                        <label for="patient-is-empty">空床</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="patient-summary-select">患者概要</label>
+                    <select id="patient-summary-select"></select>
+                    <input type="text" id="patient-summary-text" placeholder="概要を自由記述">
+                </div>
+                <div class="form-row device-checks">
+                    <div class="form-group checkbox-group"><input type="checkbox" id="patient-vent"><label for="patient-vent">人工呼吸</label></div>
+                    <div class="form-group checkbox-group"><input type="checkbox" id="patient-purification"><label for="patient-purification">血液浄化</label></div>
+                    <div class="form-group checkbox-group"><input type="checkbox" id="patient-assist"><label for="patient-assist">補助循環</label></div>
+                    <div class="form-group checkbox-group"><input type="checkbox" id="patient-delirium"><label for="patient-delirium">せん妄</label></div>
+                </div>
+                <div class="form-group">
+                    <label for="patient-mobility">離床具合</label>
+                    <select id="patient-mobility"><option>床上</option><option>端坐位</option><option>立位</option><option>歩行</option></select>
+                </div>
+                <div class="form-row plan-group">
+                    <div class="form-group checkbox-group"><input type="checkbox" id="patient-discharge-plan"><label for="patient-discharge-plan">転棟予定</label><input type="time" id="patient-discharge-time" class="plan-time-hidden"></div>
+                    <div class="form-group checkbox-group"><input type="checkbox" id="patient-admission-plan"><label for="patient-admission-plan">入室予定</label><input type="time" id="patient-admission-time" class="plan-time-hidden"></div>
+                </div>
+                <div class="modal-actions"><button type="submit">決定</button><button type="button" id="patient-modal-cancel">キャンセル</button></div>
             </form>
         </div>
     </div>
