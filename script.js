@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBedSelect = document.getElementById('modal-bed-select');
     const taskForm = document.getElementById('task-form');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const timelineArea = document.querySelector('.timeline-area');
 
 
     // ----------------------------------------
@@ -131,6 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★配置済みタスクを管理する配列
     let placedTasks = [];
 
+    // ★モーダルで設定中のタスク情報を一時的に保持する変数
+    let tempTaskDataForModal = null;
+
     let currentCareCategory = 'care'; // ★ケアリストの現在のカテゴリ
 
     // ----------------------------------------
@@ -212,6 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 1; i <= 3; i++) {
                 const timelineRow = document.createElement('div');
                 timelineRow.classList.add('timeline-row');
+                // ★背景グリッド用のコンテナを追加
+                const gridContainer = document.createElement('div');
+                gridContainer.classList.add('grid-container');
+                timelineRow.appendChild(gridContainer);
+
                 timelineRow.id = `nurse${index + 1}-row${i}`;
                 rowGroup.appendChild(timelineRow);
 
@@ -245,6 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const timelineRow = document.createElement('div');
             timelineRow.classList.add('timeline-row');
+            // ★背景グリッド用のコンテナを追加
+            const gridContainer = document.createElement('div');
+            gridContainer.classList.add('grid-container');
+            timelineRow.appendChild(gridContainer);
+
             timelineRow.id = `bed${name}-row1`;
             rowGroup.appendChild(timelineRow);
 
@@ -364,6 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★関数: タスク設定モーダルを開く
     // ----------------------------------------
     function openTaskModal(taskData, startTime, droppedRowId) {
+        // ★後で使うために、ドラッグしてきたタスク情報を一時保存
+        tempTaskDataForModal = taskData;
+
         // モーダルにタスク名と開始時刻を設定
         modalTaskName.textContent = taskData.name;
         // HH:mm 形式にフォーマット
@@ -450,6 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeTaskModal() {
         modalOverlay.classList.add('modal-hidden');
         // フォームの内容をリセット（次回開いたときのために）
+        tempTaskDataForModal = null;
         taskForm.reset();
         modalNurseList.innerHTML = '';
         modalBedSelect.innerHTML = '';
@@ -471,10 +489,121 @@ document.addEventListener('DOMContentLoaded', () => {
     // フォーム送信（決定ボタン）
     taskForm.addEventListener('submit', (e) => {
         e.preventDefault(); // ページの再読み込みを防ぐ
-        console.log('タスクが決定されました！');
-        // TODO: ここでタスクを placedTasks に追加し、再描画する処理を呼び出す
+
+        // 1. モーダルから情報を収集
+        const selectedNurseElements = modalNurseList.querySelectorAll('input[name="nurses"]:checked');
+        const assignedNurses = Array.from(selectedNurseElements).map(el => el.value);
+        const assignedBed = modalBedSelect.value;
+        const [hour, minute] = modalStartTime.value.split(':');
+
+        // ★★★ 人数チェックのロジックを追加 ★★★
+        const requiredStaff = tempTaskDataForModal.staff;
+        const selectedStaff = assignedNurses.length;
+        if (requiredStaff !== selectedStaff) {
+            alert(`このタスクには ${requiredStaff} 人の看護師が必要です。\n現在 ${selectedStaff} 人選択されています。`);
+            return; // 人数が合わない場合は処理を中断
+        }
+
+        // 2. 開始時刻と終了時刻をDateオブジェクトとして生成
+        const startTime = new Date();
+        startTime.setHours(parseInt(hour, 10), parseInt(minute, 10), 0, 0);
+
+        const durationMinutes = tempTaskDataForModal.time * 5;
+        const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+
+        // 3. 新しいタスクオブジェクトを作成
+        const newTask = {
+            id: `task_${Date.now()}`, // ユニークID
+            name: tempTaskDataForModal.name,
+            category: tempTaskDataForModal.category,
+            startTime: startTime,
+            endTime: endTime,
+            duration: durationMinutes,
+            assignedNurses: assignedNurses,
+            assignedBed: assignedBed,
+            // TODO: 重複を避けるための表示行情報を追加する
+            displayRows: {} 
+        };
+
+        // 4. タスクをデータストアに追加
+        placedTasks.push(newTask);
+
+        // 5. タイムラインを再描画
+        renderAllTasks();
+
+        // 6. モーダルを閉じる
         closeTaskModal();
     });
+
+    // ----------------------------------------
+    // ★関数: 配置済みのすべてのタスクをタイムラインに描画
+    // ----------------------------------------
+    function renderAllTasks() {
+        // 1. 既存のタスクブロックをすべて削除
+        document.querySelectorAll('.task-block').forEach(el => el.remove());
+
+        // 2. 5分ブロックの幅を取得
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+
+        // 3. 現在のシフトの開始時刻と終了時刻をDateオブジェクトで定義
+        const shiftStart = new Date();
+        shiftStart.setHours(currentShiftStartHour, 0, 0, 0);
+        const shiftEnd = new Date(shiftStart.getTime() + totalHours * 60 * 60000);
+
+        // 4. 配置済みタスクをループして描画
+        placedTasks.forEach(task => {
+            // タスクが現在のシフト時間外ならスキップ
+            if (task.endTime <= shiftStart || task.startTime >= shiftEnd) {
+                return;
+            }
+
+            // 5. タスクの描画位置（左端からのオフセット）と幅を計算
+            const offsetMinutes = (task.startTime - shiftStart) / 60000;
+            const left = (offsetMinutes / 5) * fiveMinBlockWidth;
+            const width = (task.duration / 5) * fiveMinBlockWidth;
+
+            // 6. 現在のビューモードに応じて描画対象の行を探す
+            if (currentViewMode === 'nurse') {
+                // 看護師ボードの場合
+                const northCount = parseInt(countNorthInput.value, 10);
+                const southCount = parseInt(countSouthInput.value, 10);
+                const currentNurseList = (currentWard === 'north')
+                    ? generateNurseList(northCount, 1, '北')
+                    : generateNurseList(southCount, northCount, '南');
+                const nurseRowGroups = timelineBody.querySelectorAll('.nurse-row-group');
+
+                task.assignedNurses.forEach(nurseName => {
+                    const nurseIndex = currentNurseList.indexOf(nurseName);
+                    if (nurseIndex !== -1 && nurseRowGroups[nurseIndex]) {
+                        const targetRowGroup = nurseRowGroups[nurseIndex];
+                        // 現状は常に1行目に描画する
+                        const targetRow = targetRowGroup.querySelector('.timeline-row');
+                        createTaskElement(task, targetRow, left, width);
+                    }
+                });
+            } else {
+                // ベッドボードの場合
+                const targetRow = document.getElementById(`bed${task.assignedBed}-row1`);
+                if (targetRow) {
+                    createTaskElement(task, targetRow, left, width);
+                }
+            }
+        });
+    }
+
+    // ----------------------------------------
+    // ★関数: タスク要素を生成してDOMに追加
+    // ----------------------------------------
+    function createTaskElement(task, parentRow, left, width) {
+        const taskEl = document.createElement('div');
+        taskEl.className = 'task-block';
+        taskEl.dataset.taskId = task.id;
+        taskEl.dataset.category = task.category;
+        taskEl.style.left = `${left}px`;
+        taskEl.style.width = `${width}px`;
+        taskEl.textContent = task.name;
+        parentRow.appendChild(taskEl);
+    }
 
     // ----------------------------------------
     // 関数: 左側エリアとタイムライン本体を描画（分岐処理）
@@ -490,6 +619,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             renderBedBoard(currentWard);
         }
+
+        // ★ボード描画後に、配置済みタスクも描画する
+        renderAllTasks();
     }
 
     // ----------------------------------------
@@ -526,18 +658,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 3. タイムライン本体（5分グリッド）の生成 ---
-        const timelineRows = timelineBody.querySelectorAll('.timeline-row');
+        const gridContainers = timelineBody.querySelectorAll('.grid-container');
         const totalCells = totalHours * blocksPerHour_Body;
 
-        timelineRows.forEach(row => {
-            row.innerHTML = ''; // グリッドをクリア
+        gridContainers.forEach(container => {
+            container.innerHTML = ''; // グリッドをクリア
             for (let i = 0; i < totalCells; i++) {
                 const cell = document.createElement('div');
                 cell.classList.add('grid-cell');
                 if ((i + 1) % 12 === 0) { cell.classList.add('hour-line'); } // 1時間ごとの線
                 else if ((i + 1) % 6 === 0) { cell.classList.add('half-hour-line'); } // 30分ごとの線
                 else if ((i + 1) % 2 === 0) { cell.classList.add('ten-min-line'); } // 10分ごとの線
-                row.appendChild(cell);
+                container.appendChild(cell);
             }
         });
         
@@ -553,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateDisplay() {
         renderMainArea(); // renderWardから変更
         createTimeline(currentShiftStartHour);
+        timelineArea.scrollLeft = 0; // スクロール位置をリセット
     }
 
     // ----------------------------------------
@@ -596,14 +729,16 @@ document.addEventListener('DOMContentLoaded', () => {
         currentShiftStartHour = 8;
         btnAm.classList.add('active');
         btnPm.classList.remove('active');
-        createTimeline(currentShiftStartHour); // 時間軸のみ更新
+        createTimeline(currentShiftStartHour);
+        renderAllTasks();
     });
 
     btnPm.addEventListener('click', () => {
         currentShiftStartHour = 13;
         btnPm.classList.add('active');
         btnAm.classList.remove('active');
-        createTimeline(currentShiftStartHour); // 時間軸のみ更新
+        createTimeline(currentShiftStartHour);
+        renderAllTasks();
     });
 
     // ★人数入力が変更されたら再描画
