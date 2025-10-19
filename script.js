@@ -200,6 +200,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 timelineRow.classList.add('timeline-row');
                 timelineRow.id = `nurse${index + 1}-row${i}`;
                 rowGroup.appendChild(timelineRow);
+
+                // --- ▼▼▼ ドラッグ＆ドロップのイベントリスナーを追加 ▼▼▼ ---
+                timelineRow.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // ドロップを許可するために必須
+                });
+
+                timelineRow.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    console.log('ドロップされたタスク:', taskData);
+                    console.log('ドロップされた行:', timelineRow.id);
+                });
+                // --- ▲▲▲ ドラッグ＆ドロップのイベントリスナーを追加 ▲▲▲ ---
             }
             timelineBody.appendChild(rowGroup);
         });
@@ -225,6 +238,19 @@ document.addEventListener('DOMContentLoaded', () => {
             timelineRow.classList.add('timeline-row');
             timelineRow.id = `bed${name}-row1`;
             rowGroup.appendChild(timelineRow);
+
+            // --- ▼▼▼ ドラッグ＆ドロップのイベントリスナーを追加 ▼▼▼ ---
+            timelineRow.addEventListener('dragover', (e) => {
+                e.preventDefault(); // ドロップを許可するために必須
+            });
+
+            timelineRow.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                console.log('ドロップされたタスク:', taskData);
+                console.log('ドロップされた行:', timelineRow.id);
+            });
+            // --- ▲▲▲ ドラッグ＆ドロップのイベントリスナーを追加 ▲▲▲ ---
             
             timelineBody.appendChild(rowGroup);
         });
@@ -241,12 +267,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemEl = document.createElement('div');
             itemEl.classList.add('care-item');
             itemEl.dataset.category = category;
+            itemEl.draggable = true; // ★ドラッグ可能にする
 
             itemEl.innerHTML = `
                 <div class="care-item-name">${task.name}</div>
                 <div class="care-item-staff">${task.staff}人</div>
                 <div class="care-item-time">${task.time * 5}分</div>
             `;
+
+            // ★ドラッグ開始時のイベント
+            itemEl.addEventListener('dragstart', (e) => {
+                // ドラッグするデータをJSON形式でセット
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    name: task.name,
+                    staff: task.staff,
+                    time: task.time, // 5分単位のブロック数
+                    category: category
+                }));
+            });
+
             careListBody.appendChild(itemEl);
         });
     }
@@ -337,16 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 0; i < totalCells; i++) {
                 const cell = document.createElement('div');
                 cell.classList.add('grid-cell');
-                if ((i + 1) % 12 === 0) { cell.classList.add('hour-line'); }
-                else if ((i + 1) % 6 === 0) { cell.classList.add('half-hour-line'); }
-                else if ((i + 1) % 2 === 0) { cell.classList.add('ten-min-line'); }
+                if ((i + 1) % 12 === 0) { cell.classList.add('hour-line'); } // 1時間ごとの線
+                else if ((i + 1) % 6 === 0) { cell.classList.add('half-hour-line'); } // 30分ごとの線
+                else if ((i + 1) % 2 === 0) { cell.classList.add('ten-min-line'); } // 10分ごとの線
                 row.appendChild(cell);
             }
         });
         
-        // --- 4. ヘッダーの高さ調整 ---
+        // --- 4. ヘッダーの高さ調整 (CSSで一元管理するため不要に) ---
         if (namesHeaderSpacer) {
-            namesHeaderSpacer.style.height = "48.5px";
+            // namesHeaderSpacer.style.height = "48.5px";
         }
     }
 

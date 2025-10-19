@@ -169,6 +169,12 @@ body {
 .timeline-row:last-child {
     border-bottom: 1px solid #ccc;
 }
+/* ドラッグ中の行のスタイル */
+.timeline-row:hover {
+    background-color: #f0f8ff;
+}
+
+
 
 /* ★5分ごとのセル (JSで生成) */
 .grid-cell {
@@ -285,6 +291,7 @@ body {
     padding: 8px;
     border-bottom: 1px solid #eee;
     font-size: 14px;
+    cursor: grab; /* ★ドラッグできることを示すカーソル */
 }
 
 .care-item-name {
