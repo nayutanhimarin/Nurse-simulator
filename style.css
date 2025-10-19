@@ -1,0 +1,145 @@
+/* 基本設定 */
+body {
+    font-family: sans-serif;
+    background-color: #f4f4f4;
+    padding: 20px;
+    margin: 0; /* ★bodyの余白をリセット */
+}
+
+/* 5分 (1コマ) の幅を定義します */
+:root {
+    --col-width-5min: 8px; 
+    --col-width-10min: calc(var(--col-width-5min) * 2); /* 16px */
+    
+    /* ★看護師1行の高さ */
+    --row-height: 24px; 
+    
+    /* ★左側の名前エリアの幅 */
+    --names-area-width: 100px;
+}
+
+/* ★全体レイアウト (左:名前 / 右:タイムライン) */
+.schedule-board-container {
+    display: flex;
+}
+.names-area {
+    width: var(--names-area-width);
+    flex-shrink: 0; /* 縮まないように固定 */
+    background-color: #f9f9f9;
+}
+.timeline-area {
+    width: 100%;
+    overflow-x: auto; /* ★横スクロールはこちらに移動 */
+}
+
+/* タイムライン全体 (★横スクロールをtimeline-areaに移管) */
+.timeline-container {
+    /* width: 100%; */ /* ★削除 */
+    /* overflow-x: auto; */ /* ★削除 */
+    border: 1px solid #ccc;
+    background-color: #fff;
+}
+
+/* 時間ヘッダー (8時... と 0 10 20...) */
+.timeline-header {
+    border-bottom: 2px solid #aaa;
+    background-color: #f9f9f9;
+    
+    /* ★左の名前エリア幅に合わせて左に余白を作る */
+    /* padding-left: var(--names-area-width); */
+    /* ↑この方法はスクロール時にずれるため、names-area側で調整 */
+}
+
+/* ★左側：名前エリアのヘッダー高さ合わせ用 */
+.names-header-spacer {
+    height: 48.5px;  /* ★削除 (JSで設定する) */
+    border-bottom: 2px solid #aaa;
+    background-color: #f9f9f9;
+}
+
+/* ★左側：看護師名 */
+.nurse-name-block {
+    /* 1人分(3行)の高さに */
+    height: calc(var(--row-height) * 3);
+    padding: 5px;
+    font-weight: bold;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    box-sizing: border-box;
+    /* ★追記: 文字を上下中央に配置 */
+    display: flex;
+    align-items: center;
+}
+
+
+.time-row {
+    display: flex; 
+}
+.hour-row {
+    border-bottom: 1px solid #ccc;
+}
+.hour-block {
+    width: calc(var(--col-width-10min) * 6); 
+    text-align: center;
+    padding: 5px 0;
+    font-weight: bold;
+    font-size: 16px;
+    border-right: 1px solid #ccc;
+    box-sizing: border-box; 
+}
+.minute-row { } /* 警告対策（削除してもOK） */
+.minute-block {
+    width: var(--col-width-10min); 
+    text-align: center; 
+    font-size: 10px;
+    color: #555;
+    border-right: 1px dotted #ddd; 
+    box-sizing: border-box;
+}
+.minute-block.half-hour {
+    border-right: 1px solid #bbb;
+}
+
+
+/* ★★★ タイムライン本体 ★★★ */
+.timeline-body {
+    /* JSで中身が追加されます */
+}
+
+/* ★看護師1人分 (3行) のグループ */
+.nurse-row-group {
+    border-bottom: 1px solid #ccc;
+}
+
+/* ★タイムラインの1行 (5分グリッドの親) */
+.timeline-row {
+    height: var(--row-height);
+    display: flex;
+    border-bottom: 1px solid #eee; /* 行間の薄い線 */
+    box-sizing: border-box;
+}
+/* 3行のうち最後の行だけ線を太くする */
+.timeline-row:last-child {
+    border-bottom: 1px solid #ccc;
+}
+
+/* ★5分ごとのセル (JSで生成) */
+.grid-cell {
+    width: var(--col-width-5min); /* 5分幅 */
+    height: 100%;
+    border-right: 1px dotted #ddd; /* 5分ごとの点線 */
+    box-sizing: border-box;
+}
+
+/* 10分ごとの線 (JSでクラス付与) */
+.grid-cell.ten-min-line {
+    border-right: 1px solid #ccc;
+}
+/* 30分ごとの線 (JSでクラス付与) */
+.grid-cell.half-hour-line {
+    border-right: 1px solid #aaa;
+}
+/* 1時間ごとの線 (JSでクラス付与) */
+.grid-cell.hour-line {
+    border-right: 1px solid #999;
+}
