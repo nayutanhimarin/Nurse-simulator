@@ -3,65 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>看護師スケジュール</title>
+    <title>ICUリーダー采配シミュレーター</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="controls-container">
-        <!-- ▼▼▼ ここから追加 ▼▼▼ -->
-        <div class="mode-tabs">
-            <button id="btn-nurse-board" class="tab-button active">看護師ボード</button>
-            <button id="btn-bed-board" class="tab-button">ベッドボード</button>
-        </div>
-        <!-- ▲▲▲ ここまで追加 ▲▲▲ -->
-        <div class="mode-tabs">
-            <button id="btn-north" class="tab-button active">北病棟</button>
-            <button id="btn-south" class="tab-button">南病棟</button>
-        </div>
-        <!-- ▼▼▼ ここから追加 ▼▼▼ -->
-        <div class="nurse-count-settings">
-            <div>
-                <label for="count-north">北病棟 人数:</label>
-                <input type="number" id="count-north" value="6" min="1" style="width: 50px;">
-            </div>
-            <div>
-                <label for="count-south">南病棟 人数:</label>
-                <input type="number" id="count-south" value="7" min="1" style="width: 50px;">
-            </div>
-        </div>
-        <!-- ▲▲▲ ここまで追加 ▲▲▲ -->
-        <div class="mode-tabs">
-            <button id="btn-am" class="tab-button active">午前</button>
-            <button id="btn-pm" class="tab-button">午後</button>
-        </div>
-    </div>
+    <div class="app-container">
 
-    <div class="schedule-board-container">
-        
-        <div class="names-area">
-            <div class="names-header-spacer"></div>
-            <!-- JSで看護師名がここに追加されます -->
-        </div>
+        <div class="main-content">
+            
+            <div class="header-container">
+                <h1>&#x1F469;&#x200D;&#x2695;&#xFE0F; ICUリーダー采配シミュレーター</h1>
+            </div>
 
-        <div class="timeline-area">
-            <div class="timeline-container">
+            <div class="ward-display-area">
+                <div class="ward-row" id="south-ward-row">
+                    <button id="btn-south" class="ward-tab tab-button">南病棟</button>
+                    <div class="bed-display-container" id="south-beds-display">
+                        <!-- JSでベッド(A-L)がここに追加されます -->
+                    </div>
+                </div>
+                <div class="ward-row" id="north-ward-row">
+                    <button id="btn-north" class="ward-tab tab-button active">北病棟</button>
+                    <div class="bed-display-container" id="north-beds-display">
+                        <!-- JSでベッド(1-10)がここに追加されます -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-container">
+                <div class="control-group">
+                    <div class="mode-tabs">
+                        <button id="btn-nurse-board" class="tab-button active">看護師ボード</button>
+                        <button id="btn-bed-board" class="tab-button">ベッドボード</button>
+                    </div>
+                    <div class="nurse-count-settings">
+                        <div>
+                            <label for="count-south">南病棟看護師:</label>
+                            <input type="number" id="count-south" value="7" min="1">
+                        </div>
+                        <div>
+                            <label for="count-north">北病棟看護師:</label>
+                            <input type="number" id="count-north" value="6" min="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="mode-tabs">
+                        <button id="btn-am" class="tab-button active">午前</button>
+                        <button id="btn-pm" class="tab-button">午後</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="schedule-board-container">
                 
-                <div class="timeline-header">
-                    <div class="time-row hour-row">
-                        <!-- JSで時間がここに追加されます -->
-                    </div>
-                    <div class="time-row minute-row">
-                        <!-- JSで分がここに追加されます -->
-                    </div>
+                <div class="names-area">
+                    <div class="names-header-spacer"></div>
+                    <!-- JSで名前がここに追加されます -->
                 </div>
 
-                <div class="timeline-body">
-                    <!-- JSでタイムライン行がここに追加されます -->
-                </div>
+                <div class="timeline-area">
+                    <div class="timeline-container">
+                        
+                        <div class="timeline-header">
+                            <div class="time-row hour-row"></div>
+                            <div class="time-row minute-row"></div>
+                        </div>
 
+                        <div class="timeline-body"></div>
+
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div class="care-list-container">
+            <h3>ケアリスト</h3>
+            <div class="care-list-tabs"></div>
+            <div class="care-list-body"></div>
+        </div>
+
     </div>
 
     <script src="script.js"></script>
