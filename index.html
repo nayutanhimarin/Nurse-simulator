@@ -10,7 +10,8 @@
 
     <div class="app-container">
 
-        <div class="main-content">
+        <!-- ▼▼▼ 左側のメインパネル ▼▼▼ -->
+        <div class="main-panel">
             
             <div class="header-container">
                 <h1>&#x1F469;&#x200D;&#x2695;&#xFE0F; ICUリーダー采配シミュレーター</h1>
@@ -19,15 +20,11 @@
             <div class="ward-display-area">
                 <div class="ward-row" id="south-ward-row">
                     <button id="btn-south" class="ward-tab tab-button">南病棟</button>
-                    <div class="bed-display-container" id="south-beds-display">
-                        <!-- JSでベッド(A-L)がここに追加されます -->
-                    </div>
+                    <div class="bed-display-container" id="south-beds-display"></div>
                 </div>
-                <div class="ward-row" id="north-ward-row">
+                <div class="ward-row" id="north-ward-row" class="active">
                     <button id="btn-north" class="ward-tab tab-button active">北病棟</button>
-                    <div class="bed-display-container" id="north-beds-display">
-                        <!-- JSでベッド(1-10)がここに追加されます -->
-                    </div>
+                    <div class="bed-display-container" id="north-beds-display"></div>
                 </div>
             </div>
 
@@ -39,11 +36,11 @@
                     </div>
                     <div class="nurse-count-settings">
                         <div>
-                            <label for="count-south">南病棟看護師:</label>
+                            <label for="count-south">南病棟:</label>
                             <input type="number" id="count-south" value="7" min="1">
                         </div>
                         <div>
-                            <label for="count-north">北病棟看護師:</label>
+                            <label for="count-north">北病棟:</label>
                             <input type="number" id="count-north" value="6" min="1">
                         </div>
                     </div>
@@ -57,32 +54,40 @@
             </div>
 
             <div class="schedule-board-container">
-                
                 <div class="names-area">
                     <div class="names-header-spacer"></div>
-                    <!-- JSで名前がここに追加されます -->
                 </div>
-
                 <div class="timeline-area">
                     <div class="timeline-container">
-                        
                         <div class="timeline-header">
                             <div class="time-row hour-row"></div>
                             <div class="time-row minute-row"></div>
                         </div>
-
                         <div class="timeline-body"></div>
-
                     </div>
                 </div>
             </div>
         </div>
+        <!-- ▲▲▲ ここまでメインパネル ▲▲▲ -->
 
-        <div class="care-list-container">
-            <h3>ケアリスト</h3>
-            <div class="care-list-tabs"></div>
-            <div class="care-list-body"></div>
+
+        <!-- ▼▼▼ 右側のサイドパネル ▼▼▼ -->
+        <div class="side-panel">
+            <div class="heatmap-controls-container">
+                <h4>&#x1F525; 業務量ヒートマップ</h4>
+                <div class="time-selector">
+                    <label for="heatmap-time">表示時刻:</label>
+                    <input type="time" id="heatmap-time" name="heatmap-time" value="08:00" step="300">
+                </div>
+            </div>
+
+            <div class="care-list-container">
+                <h3>ケアリスト</h3>
+                <div class="care-list-tabs"></div>
+                <div class="care-list-body"></div>
+            </div>
         </div>
+        <!-- ▲▲▲ ここまでサイドパネル ▲▲▲ -->
 
     </div>
 
