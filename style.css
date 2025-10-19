@@ -241,6 +241,28 @@ body {
     border-bottom: 1px solid #e0e0ff;
 }
 
+/* ▼▼▼ ゴミ箱のスタイル ▼▼▼ */
+.trash-can-area {
+    width: 40px;
+    height: 30px;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    color: #aaa;
+    transition: all 0.2s;
+}
+
+/* ゴミ箱の上にタスクがドラッグされた時のスタイル */
+.trash-can-area.drag-over {
+    transform: scale(1.1);
+    background-color: #ffcccc;
+    border-color: #ff0000;
+    color: #ff0000;
+}
+
 /* ▼▼▼ ここからケアリストのスタイルを追加 ▼▼▼ */
 /* ▼▼▼ ケアリストのスタイルを調整 ▼▼▼ */
 .care-list-container {

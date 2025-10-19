@@ -41,6 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
     const modalDeleteBtn = document.getElementById('modal-delete-btn');
     const timelineArea = document.querySelector('.timeline-area');
+    const heatmapTimeInput = document.getElementById('heatmap-time');
+    const trashCan = document.getElementById('trash-can');
 
 
     // ----------------------------------------
@@ -392,8 +394,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // モーダルにタスク名と開始時刻を設定
         modalTaskName.textContent = taskData.name;
-        // HH:mm 形式にフォーマット
-        modalStartTime.value = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+        // ★★★ 5分単位に丸めてからHH:mm 形式にフォーマット ★★★
+        const roundedMinutes = Math.round(startTime.getMinutes() / 5) * 5;
+        const roundedStartTime = new Date(startTime);
+        roundedStartTime.setMinutes(roundedMinutes);
+
+        modalStartTime.value = `${String(roundedStartTime.getHours()).padStart(2, '0')}:${String(roundedStartTime.getMinutes()).padStart(2, '0')}`;
 
         // --- ▼▼▼ ドロップされた対象を特定する処理を追加 ▼▼▼ ---
         let droppedNurseName = null;
@@ -523,6 +529,130 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- ▼▼▼ ゴミ箱のドラッグ＆ドロップ処理を追加 ▼▼▼ ---
+    trashCan.addEventListener('dragover', (e) => {
+        e.preventDefault(); // ドロップを許可
+        // text/task-idを持っている場合のみ反応する
+        if (Array.from(e.dataTransfer.types).includes('text/task-id')) {
+            trashCan.classList.add('drag-over');
+        }
+    });
+
+    trashCan.addEventListener('dragleave', () => {
+        trashCan.classList.remove('drag-over');
+    });
+
+    trashCan.addEventListener('drop', (e) => {
+        e.preventDefault();
+        trashCan.classList.remove('drag-over');
+
+        const taskId = e.dataTransfer.getData('text/task-id');
+        const taskIndex = placedTasks.findIndex(t => t.id === taskId);
+        if (taskIndex > -1) {
+            placedTasks.splice(taskIndex, 1);
+            renderAllTasks();
+        }
+    });
+    // --- ▲▲▲ ゴミ箱の処理を追加 ▲▲▲ ---
+
+    // ----------------------------------------
+    // ★関数: タスクの重複をチェックする
+    // ----------------------------------------
+    function isOverlapping(taskA, taskB) {
+        return taskA.startTime < taskB.endTime && taskA.endTime > taskB.startTime;
+    }
+
+    // ----------------------------------------
+    // ★関数: タスクの配置場所（行）を決定する
+    // ----------------------------------------
+    function findPlacement(taskToPlace) {
+        // ★★★ 1. ベッドの重複チェックを追加 ★★★
+        const tasksOnSameBed = placedTasks.filter(t =>
+            t.id !== taskToPlace.id && // 編集中のタスク自身は除外
+            t.assignedBed === taskToPlace.assignedBed
+        );
+        const bedHasOverlap = tasksOnSameBed.some(existingTask => isOverlapping(taskToPlace, existingTask));
+        if (bedHasOverlap) {
+            // ベッドが重複している場合は、エラーを示すオブジェクトを返す
+            return { error: 'bed' };
+        }
+
+        // ★★★ 2. 看護師の重複チェック（既存のロジック） ★★★
+        const displayRows = {};
+        for (const nurseName of taskToPlace.assignedNurses) {
+            let placed = false;
+            for (let row = 1; row <= 3; row++) {
+                const tasksOnRow = placedTasks.filter(t =>
+                    t.id !== taskToPlace.id && // 編集中のタスク自身は除外
+                    t.assignedNurses.includes(nurseName) &&
+                    t.displayRows[nurseName] === row
+                );
+                const hasOverlap = tasksOnRow.some(existingTask => isOverlapping(taskToPlace, existingTask));
+                if (!hasOverlap) {
+                    displayRows[nurseName] = row;
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                return { error: 'nurse' }; // 3行とも埋まっていたらエラーオブジェクトを返す
+            }
+        }
+        return { displayRows: displayRows }; // 成功
+    }
+
+    // ----------------------------------------
+    // ★関数: 配置済みのすべてのタスクをタイムラインに描画 (この関数が抜けていました)
+    // ----------------------------------------
+    function renderAllTasks() {
+        // 1. 既存のタスクブロックをすべて削除
+        document.querySelectorAll('.task-block').forEach(el => el.remove());
+
+        // 2. 5分ブロックの幅を取得
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+
+        // 3. 現在のシフトの開始時刻と終了時刻をDateオブジェクトで定義
+        const shiftStart = new Date();
+        shiftStart.setHours(currentShiftStartHour, 0, 0, 0);
+        const shiftEnd = new Date(shiftStart.getTime() + totalHours * 60 * 60000);
+
+        // 4. 配置済みタスクをループして描画
+        placedTasks.forEach(task => {
+            // タスクが現在のシフト時間外ならスキップ
+            if (task.endTime <= shiftStart || task.startTime >= shiftEnd) {
+                return;
+            }
+
+            // 5. タスクの描画位置（左端からのオフセット）と幅を計算
+            const offsetMinutes = (task.startTime - shiftStart) / 60000;
+            const left = (offsetMinutes / 5) * fiveMinBlockWidth;
+            const width = (task.duration / 5) * fiveMinBlockWidth;
+
+            // 6. 現在のビューモードに応じて描画対象の行を探す
+            if (currentViewMode === 'nurse') {
+                // 看護師ボードの場合
+                const northCount = parseInt(countNorthInput.value, 10);
+                const southCount = parseInt(countSouthInput.value, 10);
+                const currentNurseList = (currentWard === 'north') ? generateNurseList(northCount, 1, '北') : generateNurseList(southCount, northCount, '南');
+                const nurseRowGroups = timelineBody.querySelectorAll('.nurse-row-group');
+
+                task.assignedNurses.forEach(nurseName => {
+                    const nurseIndex = currentNurseList.indexOf(nurseName);
+                    if (nurseIndex !== -1 && nurseRowGroups[nurseIndex]) {
+                        const targetRowGroup = nurseRowGroups[nurseIndex];
+                        const displayRowIndex = task.displayRows[nurseName] - 1;
+                        if (displayRowIndex === undefined || displayRowIndex < 0) return;
+                        const targetRow = targetRowGroup.querySelectorAll('.timeline-row')[displayRowIndex];
+                        if (targetRow) createTaskElement(task, targetRow, left, width);
+                    }
+                });
+            } else { // ベッドボードの場合
+                const targetRow = document.getElementById(`bed${task.assignedBed}-row1`);
+                if (targetRow) createTaskElement(task, targetRow, left, width);
+            }
+        });
+    }
+
     // ----------------------------------------
     // ★関数: 新しいタスクを作成する
     // ----------------------------------------
@@ -558,106 +688,26 @@ document.addEventListener('DOMContentLoaded', () => {
             duration: durationMinutes,
             assignedNurses: assignedNurses,
             assignedBed: assignedBed,
-            // TODO: 重複を避けるための表示行情報を追加する
-            displayRows: {} 
+            displayRows: {} // この時点では空
         };
 
-        // 4. タスクをデータストアに追加
-        placedTasks.push(newTask);
-
-        // 5. タイムラインを再描画
-        renderAllTasks();
-
-        // 6. モーダルを閉じる
-        closeTaskModal();
-    }
-
-    // ----------------------------------------
-    // ★関数: 既存のタスクを更新する
-    // ----------------------------------------
-    function updateTask() {
-        const taskIndex = placedTasks.findIndex(t => t.id === editingTaskId);
-        if (taskIndex === -1) return; // 対象タスクが見つからない
-
-        // 1. モーダルから情報を収集
-        const selectedNurseElements = modalNurseList.querySelectorAll('input[name="nurses"]:checked');
-        const assignedNurses = Array.from(selectedNurseElements).map(el => el.value);
-        const assignedBed = modalBedSelect.value;
-        const [hour, minute] = modalStartTime.value.split(':');
-
-        // ★★★ 人数チェック ★★★
-        const requiredStaff = tempTaskDataForModal.staff;
-        if (requiredStaff && requiredStaff !== assignedNurses.length) {
-            alert(`このタスクには ${requiredStaff} 人の看護師が必要です。\n現在 ${assignedNurses.length} 人選択されています。`);
+        // ★★★ 4. 配置場所を探す（重複チェック） ★★★
+        const placementResult = findPlacement(newTask);
+        if (placementResult.error) {
+            if (placementResult.error === 'bed') {
+                alert(`タスクを配置できません。ベッド「${newTask.assignedBed}」のスケジュールが重複しています。`);
+            } else {
+                alert('タスクを配置できません。担当看護師のスケジュールが重複しています。');
+            }
             return;
         }
 
-        // 2. タスク情報を更新
-        const taskToUpdate = placedTasks[taskIndex];
-        taskToUpdate.startTime.setHours(parseInt(hour, 10), parseInt(minute, 10));
-        taskToUpdate.endTime = new Date(taskToUpdate.startTime.getTime() + taskToUpdate.duration * 60000);
-        taskToUpdate.assignedNurses = assignedNurses;
-        taskToUpdate.assignedBed = assignedBed;
+        newTask.displayRows = placementResult.displayRows;
 
-        // 3. タイムラインを再描画してモーダルを閉じる
+        // 5. タスクをデータストアに追加し、再描画
+        placedTasks.push(newTask);
         renderAllTasks();
         closeTaskModal();
-    }
-
-    // ----------------------------------------
-    // ★関数: 配置済みのすべてのタスクをタイムラインに描画
-    // ----------------------------------------
-    function renderAllTasks() {
-        // 1. 既存のタスクブロックをすべて削除
-        document.querySelectorAll('.task-block').forEach(el => el.remove());
-
-        // 2. 5分ブロックの幅を取得
-        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
-
-        // 3. 現在のシフトの開始時刻と終了時刻をDateオブジェクトで定義
-        const shiftStart = new Date();
-        shiftStart.setHours(currentShiftStartHour, 0, 0, 0);
-        const shiftEnd = new Date(shiftStart.getTime() + totalHours * 60 * 60000);
-
-        // 4. 配置済みタスクをループして描画
-        placedTasks.forEach(task => {
-            // タスクが現在のシフト時間外ならスキップ
-            if (task.endTime <= shiftStart || task.startTime >= shiftEnd) {
-                return;
-            }
-
-            // 5. タスクの描画位置（左端からのオフセット）と幅を計算
-            const offsetMinutes = (task.startTime - shiftStart) / 60000;
-            const left = (offsetMinutes / 5) * fiveMinBlockWidth;
-            const width = (task.duration / 5) * fiveMinBlockWidth;
-
-            // 6. 現在のビューモードに応じて描画対象の行を探す
-            if (currentViewMode === 'nurse') {
-                // 看護師ボードの場合
-                const northCount = parseInt(countNorthInput.value, 10);
-                const southCount = parseInt(countSouthInput.value, 10);
-                const currentNurseList = (currentWard === 'north')
-                    ? generateNurseList(northCount, 1, '北')
-                    : generateNurseList(southCount, northCount, '南');
-                const nurseRowGroups = timelineBody.querySelectorAll('.nurse-row-group');
-
-                task.assignedNurses.forEach(nurseName => {
-                    const nurseIndex = currentNurseList.indexOf(nurseName);
-                    if (nurseIndex !== -1 && nurseRowGroups[nurseIndex]) {
-                        const targetRowGroup = nurseRowGroups[nurseIndex];
-                        // 現状は常に1行目に描画する
-                        const targetRow = targetRowGroup.querySelector('.timeline-row');
-                        createTaskElement(task, targetRow, left, width);
-                    }
-                });
-            } else {
-                // ベッドボードの場合
-                const targetRow = document.getElementById(`bed${task.assignedBed}-row1`);
-                if (targetRow) {
-                    createTaskElement(task, targetRow, left, width);
-                }
-            }
-        });
     }
 
     // ----------------------------------------
@@ -672,8 +722,16 @@ document.addEventListener('DOMContentLoaded', () => {
         taskEl.style.width = `${width}px`;
         taskEl.textContent = task.name;
 
+        // ★タスクブロックをドラッグ可能にする
+        taskEl.draggable = true;
+        taskEl.addEventListener('dragstart', (e) => {
+            // ゴミ箱へのドロップ用にタスクIDをセット
+            e.dataTransfer.setData('text/task-id', task.id);
+            e.stopPropagation(); // ケアリストからのドラッグと区別
+        });
+
         // --- ▼▼▼ クリックイベントを追加して編集機能を持たせる ▼▼▼ ---
-        taskEl.addEventListener('click', () => {
+        taskEl.addEventListener('click', (e) => {
             // 1. 編集対象のタスク情報を取得
             const taskToEdit = placedTasks.find(t => t.id === task.id);
             if (!taskToEdit) return;
@@ -701,6 +759,51 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ▲▲▲ イベントを追加 ▲▲▲ ---
 
         parentRow.appendChild(taskEl);
+    }
+
+    // ----------------------------------------
+    // ★関数: 既存のタスクを更新する
+    // ----------------------------------------
+    function updateTask() {
+        const taskIndex = placedTasks.findIndex(t => t.id === editingTaskId);
+        if (taskIndex === -1) return;
+
+        // 1. モーダルから情報を収集
+        const selectedNurseElements = modalNurseList.querySelectorAll('input[name="nurses"]:checked');
+        const assignedNurses = Array.from(selectedNurseElements).map(el => el.value);
+        const assignedBed = modalBedSelect.value;
+        const [hour, minute] = modalStartTime.value.split(':');
+
+        // ★★★ 人数チェック ★★★
+        const requiredStaff = tempTaskDataForModal.staff;
+        if (requiredStaff && requiredStaff !== assignedNurses.length) {
+            alert(`このタスクには ${requiredStaff} 人の看護師が必要です。\n現在 ${assignedNurses.length} 人選択されています。`);
+            return;
+        }
+
+        // 2. 更新後のタスク情報で仮オブジェクトを作成
+        const taskToUpdate = { ...placedTasks[taskIndex] }; // コピーを作成
+        taskToUpdate.startTime.setHours(parseInt(hour, 10), parseInt(minute, 10));
+        taskToUpdate.endTime = new Date(taskToUpdate.startTime.getTime() + taskToUpdate.duration * 60000);
+        taskToUpdate.assignedNurses = assignedNurses;
+        taskToUpdate.assignedBed = assignedBed;
+
+        // ★★★ 3. 配置場所を探す（重複チェック） ★★★
+        const placementResult = findPlacement(taskToUpdate);
+        if (placementResult.error) {
+            if (placementResult.error === 'bed') {
+                alert(`タスクを配置できません。ベッド「${taskToUpdate.assignedBed}」のスケジュールが重複しています。`);
+            } else {
+                alert('タスクを配置できません。担当看護師のスケジュールが重複しています。');
+            }
+            return;
+        }
+        taskToUpdate.displayRows = placementResult.displayRows;
+
+        // 4. 元のタスクを更新し、再描画
+        placedTasks[taskIndex] = taskToUpdate;
+        renderAllTasks();
+        closeTaskModal();
     }
 
     // ----------------------------------------
@@ -848,6 +951,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentWard === 'south') {
             updateDisplay();
         }
+    });
+
+    // ★ヒートマップの時刻が変更されたら5分単位に丸める
+    heatmapTimeInput.addEventListener('change', () => {
+        const [hour, minute] = heatmapTimeInput.value.split(':').map(Number);
+        const roundedMinute = Math.round(minute / 5) * 5;
+        
+        const newDate = new Date();
+        newDate.setHours(hour, roundedMinute, 0, 0);
+
+        heatmapTimeInput.value = `${String(newDate.getHours()).padStart(2, '0')}:${String(newDate.getMinutes()).padStart(2, '0')}`;
+        // TODO: ここでヒートマップを更新する関数を呼び出す
     });
 
 
