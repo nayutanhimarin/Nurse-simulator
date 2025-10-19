@@ -91,6 +91,35 @@
 
     </div>
 
+    <!-- ▼▼▼ モーダルウィンドウのHTMLを追加 ▼▼▼ -->
+    <div id="modal-overlay" class="modal-hidden">
+        <div id="task-modal">
+            <h2>タスク詳細設定</h2>
+            <form id="task-form">
+                <div class="form-group">
+                    <label>タスク名:</label>
+                    <p id="modal-task-name" class="modal-task-name-display"></p>
+                </div>
+                <div class="form-group">
+                    <label for="modal-start-time">開始時刻:</label>
+                    <input type="time" id="modal-start-time" required>
+                </div>
+                <div class="form-group">
+                    <label>担当看護師:</label>
+                    <div id="modal-nurse-list" class="modal-checkbox-list"></div>
+                </div>
+                <div class="form-group">
+                    <label for="modal-bed-select">担当ベッド:</label>
+                    <select id="modal-bed-select" required></select>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" id="modal-confirm-btn">決定</button>
+                    <button type="button" id="modal-cancel-btn">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

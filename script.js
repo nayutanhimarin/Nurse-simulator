@@ -31,6 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const careListTabsContainer = document.querySelector('.care-list-tabs');
     const careListBody = document.querySelector('.care-list-body');
 
+    // ★モーダル関連の要素を取得
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTaskName = document.getElementById('modal-task-name');
+    const modalStartTime = document.getElementById('modal-start-time');
+    const modalNurseList = document.getElementById('modal-nurse-list');
+    const modalBedSelect = document.getElementById('modal-bed-select');
+    const taskForm = document.getElementById('task-form');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+
     // ----------------------------------------
     // 定数・データ
     // ----------------------------------------
@@ -117,6 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentViewMode = 'nurse'; // 'nurse' or 'bed'
     let currentWard = 'north';
     let currentShiftStartHour = 8;
+
+    // ★配置済みタスクを管理する配列
+    let placedTasks = [];
+
     let currentCareCategory = 'care'; // ★ケアリストの現在のカテゴリ
 
     // ----------------------------------------
@@ -206,12 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault(); // ドロップを許可するために必須
                 });
 
-                timelineRow.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                    console.log('ドロップされたタスク:', taskData);
-                    console.log('ドロップされた行:', timelineRow.id);
-                });
+                timelineRow.addEventListener('drop', (e) => handleDropOnTimeline(e, timelineRow));
                 // --- ▲▲▲ ドラッグ＆ドロップのイベントリスナーを追加 ▲▲▲ ---
             }
             timelineBody.appendChild(rowGroup);
@@ -244,12 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault(); // ドロップを許可するために必須
             });
 
-            timelineRow.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                console.log('ドロップされたタスク:', taskData);
-                console.log('ドロップされた行:', timelineRow.id);
-            });
+            timelineRow.addEventListener('drop', (e) => handleDropOnTimeline(e, timelineRow));
             // --- ▲▲▲ ドラッグ＆ドロップのイベントリスナーを追加 ▲▲▲ ---
             
             timelineBody.appendChild(rowGroup);
@@ -317,6 +321,160 @@ document.addEventListener('DOMContentLoaded', () => {
             careListTabsContainer.appendChild(tabEl);
         });
     }
+
+    // ----------------------------------------
+    // ★関数: タイムラインへのドロップを処理
+    // ----------------------------------------
+    function handleDropOnTimeline(e, timelineRow) {
+        e.preventDefault();
+        const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+        // 1. タイムラインの左端の座標を取得
+        // getBoundingClientRect()はビューポートに対する要素の位置情報を返す
+        const timelineRect = timelineBody.getBoundingClientRect();
+        const timelineLeft = timelineRect.left;
+
+        // 2. ドロップされたX座標（timelineBody内での相対座標）を計算
+        const dropX = e.clientX - timelineLeft;
+
+        // 3. 5分ブロックの幅を取得 (CSS変数から)
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+
+        // 4. 何ブロック目にドロップされたかを計算 (小数点以下は切り捨て)
+        const blockIndex = Math.floor(dropX / fiveMinBlockWidth);
+
+        // 5. シフト開始からの経過分数を計算
+        const minutesFromStart = blockIndex * 5;
+
+        // 6. 開始時刻を計算
+        const startTime = new Date(); // 今日の日付を基準にする
+        startTime.setHours(currentShiftStartHour, 0, 0, 0); // 今日の日付で、シフト開始時刻に設定
+        startTime.setMinutes(startTime.getMinutes() + minutesFromStart); // 経過分数を加算
+
+        // 7. 結果をコンソールに出力
+        // console.log('ドロップされたタスク:', taskData);
+        // console.log('ドロップされた行:', timelineRow.id);
+        // console.log('計算された開始時刻:', startTime.toLocaleTimeString('it-IT')); // "HH:mm:ss" 形式で表示
+
+        // 8. ★モーダルを開く
+        openTaskModal(taskData, startTime, timelineRow.id);
+    }
+
+    // ----------------------------------------
+    // ★関数: タスク設定モーダルを開く
+    // ----------------------------------------
+    function openTaskModal(taskData, startTime, droppedRowId) {
+        // モーダルにタスク名と開始時刻を設定
+        modalTaskName.textContent = taskData.name;
+        // HH:mm 形式にフォーマット
+        modalStartTime.value = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+
+        // --- ▼▼▼ ドロップされた対象を特定する処理を追加 ▼▼▼ ---
+        let droppedNurseName = null;
+        let droppedBedName = null;
+
+        if (droppedRowId.startsWith('nurse')) {
+            // 'nurse1-row1' のようなIDから看護師のインデックスを取得
+            const match = droppedRowId.match(/nurse(\d+)/);
+            const nurseIndex = match ? parseInt(match[1], 10) - 1 : -1;
+            // 対応する看護師名を取得（後続の処理で生成されるnurseListを仮定）
+            const tempNurseList = (currentWard === 'north') ? generateNurseList(parseInt(countNorthInput.value, 10), 1, '北') : generateNurseList(parseInt(countSouthInput.value, 10), parseInt(countNorthInput.value, 10), '南');
+            if (nurseIndex >= 0 && nurseIndex < tempNurseList.length) {
+                droppedNurseName = tempNurseList[nurseIndex];
+            }
+        } else if (droppedRowId.startsWith('bed')) {
+            // 'bedA-row1' のようなIDからベッド名を取得
+            const match = droppedRowId.match(/bed(.+)-row1/);
+            if (match) {
+                droppedBedName = match[1];
+            }
+        }
+
+        // --- ▼▼▼ 看護師リストとベッドリストを動的に生成する処理を追加 ▼▼▼ ---
+
+        // 1. いったん中身を空にする
+        modalNurseList.innerHTML = '';
+        modalBedSelect.innerHTML = '';
+
+        // 2. 現在の病棟の看護師リストを取得してチェックボックスを生成
+        const northCount = parseInt(countNorthInput.value, 10);
+        const southCount = parseInt(countSouthInput.value, 10);
+        let nurseList;
+        if (currentWard === 'north') {
+            nurseList = generateNurseList(northCount, 1, '北');
+        } else {
+            const southStartNumber = northCount;
+            nurseList = generateNurseList(southCount, southStartNumber, '南');
+        }
+
+        nurseList.forEach((nurseName, index) => {
+            const nurseId = `modal-nurse-${index}`;
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('modal-checkbox-item'); // ★スタイル適用のためクラス追加
+            const isChecked = (nurseName === droppedNurseName) ? 'checked' : ''; // ★ドロップされた看護師か判定
+            itemDiv.innerHTML = `
+                <input type="checkbox" id="${nurseId}" name="nurses" value="${nurseName}" ${isChecked}>
+                <label for="${nurseId}">${nurseName}</label>
+            `;
+            modalNurseList.appendChild(itemDiv);
+        });
+
+        // 3. 現在の病棟のベッドリストを取得してドロップダウンを生成
+        const bedConfig = beds[currentWard];
+        const bedList = generateBedList(bedConfig);
+        // 南病棟の場合はリストを逆順にする
+        if (currentWard === 'south') {
+            bedList.reverse();
+        }
+
+        bedList.forEach(bedName => {
+            const option = document.createElement('option');
+            option.value = bedName;
+            option.textContent = bedName;
+            modalBedSelect.appendChild(option);
+        });
+
+        // ★ドロップされたベッドがあれば、それを選択状態にする
+        if (droppedBedName) {
+            modalBedSelect.value = droppedBedName;
+        }
+        // --- ▲▲▲ ここまでの処理を修正・追加 ▲▲▲ ---
+
+        // モーダルを表示
+        modalOverlay.classList.remove('modal-hidden');
+    }
+
+    // ----------------------------------------
+    // ★関数: タスク設定モーダルを閉じる
+    // ----------------------------------------
+    function closeTaskModal() {
+        modalOverlay.classList.add('modal-hidden');
+        // フォームの内容をリセット（次回開いたときのために）
+        taskForm.reset();
+        modalNurseList.innerHTML = '';
+        modalBedSelect.innerHTML = '';
+    }
+
+    // ----------------------------------------
+    // ★イベントリスナー: モーダルの操作
+    // ----------------------------------------
+    // キャンセルボタン
+    modalCancelBtn.addEventListener('click', closeTaskModal);
+
+    // オーバーレイ（背景）クリックでも閉じる
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            closeTaskModal();
+        }
+    });
+
+    // フォーム送信（決定ボタン）
+    taskForm.addEventListener('submit', (e) => {
+        e.preventDefault(); // ページの再読み込みを防ぐ
+        console.log('タスクが決定されました！');
+        // TODO: ここでタスクを placedTasks に追加し、再描画する処理を呼び出す
+        closeTaskModal();
+    });
 
     // ----------------------------------------
     // 関数: 左側エリアとタイムライン本体を描画（分岐処理）
