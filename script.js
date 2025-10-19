@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBedSelect = document.getElementById('modal-bed-select');
     const taskForm = document.getElementById('task-form');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const modalDeleteBtn = document.getElementById('modal-delete-btn');
     const timelineArea = document.querySelector('.timeline-area');
 
 
@@ -134,6 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ★モーダルで設定中のタスク情報を一時的に保持する変数
     let tempTaskDataForModal = null;
+
+    // ★編集中のタスクIDを保持する変数
+    let editingTaskId = null;
 
     let currentCareCategory = 'care'; // ★ケアリストの現在のカテゴリ
 
@@ -378,8 +382,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★関数: タスク設定モーダルを開く
     // ----------------------------------------
     function openTaskModal(taskData, startTime, droppedRowId) {
-        // ★後で使うために、ドラッグしてきたタスク情報を一時保存
-        tempTaskDataForModal = taskData;
+        // ★★★ 新規作成時のみ、編集モードをリセットし、タスク情報を一時保存する ★★★
+        if (!editingTaskId) {
+            document.querySelector('#task-modal h2').textContent = "タスク詳細設定"; // タイトルを戻す
+            // 後で使うために、ドラッグしてきたタスク情報を一時保存
+            modalDeleteBtn.style.display = 'none'; // ★新規作成時は削除ボタンを隠す
+            tempTaskDataForModal = taskData;
+        }
 
         // モーダルにタスク名と開始時刻を設定
         modalTaskName.textContent = taskData.name;
@@ -467,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeTaskModal() {
         modalOverlay.classList.add('modal-hidden');
         // フォームの内容をリセット（次回開いたときのために）
+        editingTaskId = null; // 編集モードを解除
         tempTaskDataForModal = null;
         taskForm.reset();
         modalNurseList.innerHTML = '';
@@ -486,10 +496,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ★モーダル内の削除ボタンのイベントリスナー
+    modalDeleteBtn.addEventListener('click', () => {
+        if (!editingTaskId) return; // 編集モードでなければ何もしない
+
+        if (confirm('このタスクを本当に削除しますか？')) {
+            const taskIndex = placedTasks.findIndex(t => t.id === editingTaskId);
+            if (taskIndex > -1) {
+                placedTasks.splice(taskIndex, 1); // 配列からタスクを削除
+                renderAllTasks(); // 画面を再描画
+                closeTaskModal(); // モーダルを閉じる
+            }
+        }
+    });
+
+
     // フォーム送信（決定ボタン）
     taskForm.addEventListener('submit', (e) => {
         e.preventDefault(); // ページの再読み込みを防ぐ
 
+        // ★編集モードか新規作成モードかを判定
+        if (editingTaskId) {
+            updateTask();
+        } else {
+            createNewTask();
+        }
+    });
+
+    // ----------------------------------------
+    // ★関数: 新しいタスクを作成する
+    // ----------------------------------------
+    function createNewTask() {
         // 1. モーダルから情報を収集
         const selectedNurseElements = modalNurseList.querySelectorAll('input[name="nurses"]:checked');
         const assignedNurses = Array.from(selectedNurseElements).map(el => el.value);
@@ -533,7 +570,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 6. モーダルを閉じる
         closeTaskModal();
-    });
+    }
+
+    // ----------------------------------------
+    // ★関数: 既存のタスクを更新する
+    // ----------------------------------------
+    function updateTask() {
+        const taskIndex = placedTasks.findIndex(t => t.id === editingTaskId);
+        if (taskIndex === -1) return; // 対象タスクが見つからない
+
+        // 1. モーダルから情報を収集
+        const selectedNurseElements = modalNurseList.querySelectorAll('input[name="nurses"]:checked');
+        const assignedNurses = Array.from(selectedNurseElements).map(el => el.value);
+        const assignedBed = modalBedSelect.value;
+        const [hour, minute] = modalStartTime.value.split(':');
+
+        // ★★★ 人数チェック ★★★
+        const requiredStaff = tempTaskDataForModal.staff;
+        if (requiredStaff && requiredStaff !== assignedNurses.length) {
+            alert(`このタスクには ${requiredStaff} 人の看護師が必要です。\n現在 ${assignedNurses.length} 人選択されています。`);
+            return;
+        }
+
+        // 2. タスク情報を更新
+        const taskToUpdate = placedTasks[taskIndex];
+        taskToUpdate.startTime.setHours(parseInt(hour, 10), parseInt(minute, 10));
+        taskToUpdate.endTime = new Date(taskToUpdate.startTime.getTime() + taskToUpdate.duration * 60000);
+        taskToUpdate.assignedNurses = assignedNurses;
+        taskToUpdate.assignedBed = assignedBed;
+
+        // 3. タイムラインを再描画してモーダルを閉じる
+        renderAllTasks();
+        closeTaskModal();
+    }
 
     // ----------------------------------------
     // ★関数: 配置済みのすべてのタスクをタイムラインに描画
@@ -602,6 +671,35 @@ document.addEventListener('DOMContentLoaded', () => {
         taskEl.style.left = `${left}px`;
         taskEl.style.width = `${width}px`;
         taskEl.textContent = task.name;
+
+        // --- ▼▼▼ クリックイベントを追加して編集機能を持たせる ▼▼▼ ---
+        taskEl.addEventListener('click', () => {
+            // 1. 編集対象のタスク情報を取得
+            const taskToEdit = placedTasks.find(t => t.id === task.id);
+            if (!taskToEdit) return;
+
+            // 2. モーダルを「編集モード」で開く
+            editingTaskId = taskToEdit.id; // 編集モードに設定
+            // staffプロパティが保存されていないため、元のタスク定義から取得し直す
+            const originalTaskDefinition = careTasks[taskToEdit.category]?.items.find(item => item.name === taskToEdit.name);
+            tempTaskDataForModal = { ...taskToEdit, staff: originalTaskDefinition ? originalTaskDefinition.staff : 1 };
+
+            // 3. モーダルの内容をタスク情報で埋める
+            document.querySelector('#task-modal h2').textContent = "タスク編集"; // タイトル変更
+            modalDeleteBtn.style.display = 'inline-block'; // ★編集時は削除ボタンを表示
+            openTaskModal(taskToEdit, taskToEdit.startTime, ''); // openTaskModalを再利用
+
+            // 4. openTaskModalの後の追加処理
+            //    担当看護師のチェックボックスを復元
+            const nurseCheckboxes = modalNurseList.querySelectorAll('input[name="nurses"]');
+            nurseCheckboxes.forEach(checkbox => {
+                checkbox.checked = taskToEdit.assignedNurses.includes(checkbox.value);
+            });
+            //    担当ベッドを復元
+            modalBedSelect.value = taskToEdit.assignedBed;
+        });
+        // --- ▲▲▲ イベントを追加 ▲▲▲ ---
+
         parentRow.appendChild(taskEl);
     }
 
