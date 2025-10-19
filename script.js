@@ -347,6 +347,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------
     function handleDropOnTimeline(e, timelineRow) {
         e.preventDefault();
+
+        // ★★★ ドロップされたのが「既存タスク」か「新規タスク」かを判断 ★★★
+        const taskId = e.dataTransfer.getData('text/task-id');
+        if (taskId) {
+            // 既存タスクの移動
+            handleMoveTask(e, timelineRow, taskId);
+        } else if (e.dataTransfer.getData('text/plain')) {
+            // 新規タスクのドロップ
+            handleNewTaskDrop(e, timelineRow);
+        }
+    }
+
+    function handleNewTaskDrop(e, timelineRow) {
         const taskData = JSON.parse(e.dataTransfer.getData('text/plain'));
 
         // 1. タイムラインの左端の座標を取得
@@ -378,6 +391,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 8. ★モーダルを開く
         openTaskModal(taskData, startTime, timelineRow.id);
+    }
+
+    function handleMoveTask(e, timelineRow, taskId) {
+        const taskIndex = placedTasks.findIndex(t => t.id === taskId);
+        if (taskIndex === -1) return;
+
+        const originalTask = placedTasks[taskIndex];
+
+        // 1. 新しい開始時刻を計算
+        const timelineRect = timelineBody.getBoundingClientRect();
+        const timelineLeft = timelineRect.left;
+        const dropX = e.clientX - timelineLeft;
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+        const blockIndex = Math.floor(dropX / fiveMinBlockWidth);
+        const minutesFromStart = blockIndex * 5;
+        const newStartTime = new Date();
+        newStartTime.setHours(currentShiftStartHour, 0, 0, 0);
+        newStartTime.setMinutes(newStartTime.getMinutes() + minutesFromStart);
+
+        // 5分単位に丸める
+        const roundedMinutes = Math.round(newStartTime.getMinutes() / 5) * 5;
+        newStartTime.setMinutes(roundedMinutes);
+
+        // 2. 更新後のタスク情報で仮オブジェクトを作成
+        const updatedTask = { ...originalTask }; // コピーを作成
+        updatedTask.startTime = newStartTime;
+        updatedTask.endTime = new Date(newStartTime.getTime() + originalTask.duration * 60000);
+
+        // ★★★ 3. ドロップ先に応じて担当者/ベッドを更新 ★★★
+        if (currentViewMode === 'nurse') {
+            // 看護師ボード表示の場合
+            const sourceNurseName = e.dataTransfer.getData('text/source-nurse');
+
+            // ドロップ先の看護師名を取得
+            const match = timelineRow.id.match(/nurse(\d+)/);
+            const nurseIndex = match ? parseInt(match[1], 10) - 1 : -1;
+            const northCount = parseInt(countNorthInput.value, 10);
+            const tempNurseList = (currentWard === 'north') ? generateNurseList(northCount, 1, '北') : generateNurseList(parseInt(countSouthInput.value, 10), northCount, '南');
+            const destinationNurseName = (nurseIndex >= 0) ? tempNurseList[nurseIndex] : null;
+
+            if (sourceNurseName && destinationNurseName && sourceNurseName !== destinationNurseName) {
+                // 担当者リストを更新（移動元の看護師を移動先の看護師に入れ替える）
+                const nurseIndexInTask = updatedTask.assignedNurses.indexOf(sourceNurseName);
+                if (nurseIndexInTask > -1) {
+                    // 移動先の看護師が既にタスクに含まれているかチェック
+                    if (updatedTask.assignedNurses.includes(destinationNurseName)) {
+                        alert(`移動できません。${destinationNurseName}は既にこのタスクの担当者です。`);
+                        return;
+                    }
+                    updatedTask.assignedNurses.splice(nurseIndexInTask, 1, destinationNurseName);
+                }
+            } else {
+                // 同じ看護師の別の時間/行に移動した場合など
+                // 担当者の変更はないので何もしない
+            }
+
+        } else if (currentViewMode === 'bed') {
+            // ベッドボード表示の場合、ドロップ先のベッド名を取得して更新
+            const match = timelineRow.id.match(/bed(.+)-row1/);
+            if (match) {
+                const newBedName = match[1];
+                updatedTask.assignedBed = newBedName;
+            }
+        }
+
+
+        // 4. 配置場所を探す（重複チェック）
+        const placementResult = findPlacement(updatedTask);
+        if (placementResult.error) {
+            if (placementResult.error === 'bed') {
+                alert(`移動できません。ベッド「${updatedTask.assignedBed}」のスケジュールが重複しています。`);
+            } else {
+                alert('移動できません。担当看護師のスケジュールが重複しています。');
+            }
+            return; // 重複がある場合は移動しない
+        }
+        updatedTask.displayRows = placementResult.displayRows;
+
+        // 5. 元のタスクを更新し、再描画
+        placedTasks[taskIndex] = updatedTask;
+        renderAllTasks();
     }
 
     // ----------------------------------------
@@ -725,8 +819,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // ★タスクブロックをドラッグ可能にする
         taskEl.draggable = true;
         taskEl.addEventListener('dragstart', (e) => {
-            // ゴミ箱へのドロップ用にタスクIDをセット
+            // ★★★ 移動元情報をDataTransferにセット ★★★
             e.dataTransfer.setData('text/task-id', task.id);
+
+            // 移動元の看護師を特定してセット
+            if (currentViewMode === 'nurse') {
+                const match = parentRow.id.match(/nurse(\d+)/);
+                const nurseIndex = match ? parseInt(match[1], 10) - 1 : -1;
+                const northCount = parseInt(countNorthInput.value, 10);
+                const tempNurseList = (currentWard === 'north') ? generateNurseList(northCount, 1, '北') : generateNurseList(parseInt(countSouthInput.value, 10), northCount, '南');
+                const sourceNurseName = (nurseIndex >= 0) ? tempNurseList[nurseIndex] : null;
+                if(sourceNurseName) e.dataTransfer.setData('text/source-nurse', sourceNurseName);
+            }
             e.stopPropagation(); // ケアリストからのドラッグと区別
         });
 
