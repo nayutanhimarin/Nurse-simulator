@@ -1,9 +1,15 @@
 /* 基本設定 */
+html {
+    height: 100%;
+}
 body {
     font-family: sans-serif;
     background-color: #f4f4f4;
     padding: 20px;
     margin: 0; /* ★bodyの余白をリセット */
+    height: 100%; /* ★高さを画面全体に */
+    box-sizing: border-box; /* ★paddingを含めて高さを計算 */
+    overflow: hidden; /* ★body自体のスクロールを無効化 */
 }
 
 /* 5分 (1コマ) の幅を定義します */
@@ -33,12 +39,14 @@ body {
 .app-container {
     display: flex;
     gap: 20px;
+    height: 100%; /* ★コンテナの高さをbodyに合わせる */
 }
 .main-panel {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     gap: 15px;
+    overflow-y: auto; /* ★メインパネルの縦スクロールを有効化 */
 }
 .side-panel {
     width: 300px;
@@ -46,6 +54,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    overflow-y: auto; /* ★サイドパネルの縦スクロールを有効化 */
 }
 /* ▲▲▲ 全体レイアウトを再構築 ▲▲▲ */
 
@@ -375,9 +384,10 @@ body {
 .care-tab[data-category="break"].active { border-color: var(--color-break); background-color: var(--color-break); }
 
 .care-list-body {
-    height: calc(100vh - 150px); /* 高さをビューポートに合わせる（調整可） */
+    /* height: calc(100vh - 150px); */ /* ★固定高さを削除し、親要素に追従させる */
     overflow-y: auto;
     border: 1px solid #eee;
+    flex-grow: 1; /* ★残りのスペースを埋めるように広げる */
 }
 
 .care-item {

@@ -1397,7 +1397,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // nurseSettingsは病棟に依存しないため、全データから直接参照する
             const settings = nurseSettings[nurseName];
             const assignedBeds = settings ? settings.assignedBeds : [];
-            // const assignedBeds = nurseSettings[nurseName]?.assignedBeds || [];
 
 
 

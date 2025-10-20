@@ -5,10 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ICUリーダー采配シミュレーター</title>
     <link rel="stylesheet" href="style.css">
+    <!-- ▼▼▼ パネル間の区切り線を追加 ▼▼▼ -->
+    <style>
+        .main-panel {
+            border-left: 1px solid #ccc; /* 区切り線の色や太さはお好みで調整してください */
+        }
+    </style>
 </head>
 <body>
 
     <div class="app-container">
+
+        <!-- ▼▼▼ サイドパネルを左側に移動 ▼▼▼ -->
+        <div class="side-panel">
+            <div class="heatmap-controls-container">
+                <h4>&#x1F525; 業務量ヒートマップ</h4>
+                <div class="time-selector">
+                    <label for="heatmap-time">表示時刻:</label>
+                    <input type="time" id="heatmap-time" name="heatmap-time" value="08:00" step="300">
+                    <button id="btn-update-heatmap">表示</button>
+                </div>
+                <div class="heatmap-legend">
+                    <div class="legend-item" style="background-color: #e6f5e6;">1: 応援可</div>
+                    <div class="legend-item" style="background-color: #ffffcc;">2</div>
+                    <div class="legend-item" style="background-color: #ffe6b3;">3: 標準</div>
+                    <div class="legend-item" style="background-color: #ffcc99;">4</div>
+                    <div class="legend-item" style="background-color: #ffb380;">5: 要応援</div>
+                </div>
+            </div>
+
+            <div class="care-list-container">
+                <h3>ケアリスト</h3>
+                <div class="care-list-tabs"></div>
+                <div class="care-list-body"></div>
+            </div>
+        </div>
+        <!-- ▲▲▲ ここまでサイドパネル ▲▲▲ -->
 
         <!-- ▼▼▼ 左側のメインパネル ▼▼▼ -->
         <div class="main-panel">
@@ -85,35 +117,47 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ▼▼▼ ケアセットプランナーをメインパネル下部に移動 ▼▼▼ -->
+            <div id="care-set-container">
+                <div class="care-set-header">
+                    <h4>&#x1F4DC; ケアセットプランナー</h4>
+                    <div class="care-set-selectors">
+                        <select id="care-set-dept-select"></select>
+                        <select id="care-set-summary-select"></select>
+                        <select id="care-set-supplement-select"></select>
+                    </div>
+                    <div class="care-set-actions">
+                        <button id="btn-new-careset">新規</button>
+                        <button id="btn-save-careset">登録</button>
+                        <button id="btn-delete-careset" class="danger-btn">削除</button>
+                        <div id="care-set-trash-can" class="trash-can-area">&#x1F5D1;</div>
+
+                        <div id="new-careset-popup" class="popup-hidden">
+                            <form id="new-careset-form">
+                                <h4>ケアセット新規作成</h4>
+                                <div class="form-group"><label for="new-careset-dept">科</label><select id="new-careset-dept" required></select></div>
+                                <div class="form-group"><label for="new-careset-summary">患者概要</label><select id="new-careset-summary" required></select><input type="text" id="new-careset-summary-text" placeholder="概要を自由記述" style="display: none; margin-top: 5px;"></div>
+                                <div class="form-group"><label for="new-careset-supplement">補足 (任意)</label><input type="text" id="new-careset-supplement" placeholder="例: 抜管後、術後1日目 など"></div>
+                                <div class="modal-actions"><button type="submit">作成</button></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="care-set-body">
+                    <div id="care-set-am" class="care-set-group" draggable="true">
+                        <h4 id="care-set-am-header">午前のケアセット</h4>
+                        <div id="care-set-am-list" class="care-set-timeline-list"></div>
+                    </div>
+                    <div id="care-set-pm" class="care-set-group" draggable="true">
+                        <h4 id="care-set-pm-header">午後のケアセット</h4>
+                        <div id="care-set-pm-list" class="care-set-timeline-list"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ▲▲▲ ここまでケアセットプランナー ▲▲▲ -->
         </div>
         <!-- ▲▲▲ ここまでメインパネル ▲▲▲ -->
-
-
-        <!-- ▼▼▼ 右側のサイドパネル ▼▼▼ -->
-        <div class="side-panel">
-            <div class="heatmap-controls-container">
-                <h4>&#x1F525; 業務量ヒートマップ</h4>
-                <div class="time-selector">
-                    <label for="heatmap-time">表示時刻:</label>
-                    <input type="time" id="heatmap-time" name="heatmap-time" value="08:00" step="300">
-                    <button id="btn-update-heatmap">表示</button>
-                </div>
-                <div class="heatmap-legend">
-                    <div class="legend-item" style="background-color: #e6f5e6;">1: 応援可</div>
-                    <div class="legend-item" style="background-color: #ffffcc;">2</div>
-                    <div class="legend-item" style="background-color: #ffe6b3;">3: 標準</div>
-                    <div class="legend-item" style="background-color: #ffcc99;">4</div>
-                    <div class="legend-item" style="background-color: #ffb380;">5: 要応援</div>
-                </div>
-            </div>
-
-            <div class="care-list-container">
-                <h3>ケアリスト</h3>
-                <div class="care-list-tabs"></div>
-                <div class="care-list-body"></div>
-            </div>
-        </div>
-        <!-- ▲▲▲ ここまでサイドパネル ▲▲▲ -->
 
     </div>
 
@@ -233,44 +277,6 @@
                 </div>
                 <div class="modal-actions"><button type="submit">決定</button><button type="button" id="nurse-modal-cancel">キャンセル</button></div>
             </form>
-        </div>
-    </div>
-
-    <!-- ▼▼▼ ケアセットコンテナをここに移動（フローティング化） ▼▼▼ -->
-    <div id="care-set-container" class="care-set-container-hidden">
-        <div class="care-set-header">
-            <h4>&#x1F4DC; ケアセットプランナー</h4>
-            <div class="care-set-selectors">
-                <select id="care-set-dept-select"></select>
-                <select id="care-set-summary-select"></select>
-                <select id="care-set-supplement-select"></select>
-            </div>
-            <div class="care-set-actions">
-                <button id="btn-new-careset">新規</button>
-                <button id="btn-save-careset">登録</button>
-                <button id="btn-delete-careset" class="danger-btn">削除</button>
-                <div id="care-set-trash-can" class="trash-can-area">&#x1F5D1;</div>
-
-                <div id="new-careset-popup" class="popup-hidden">
-                    <form id="new-careset-form">
-                        <h4>ケアセット新規作成</h4>
-                        <div class="form-group"><label for="new-careset-dept">科</label><select id="new-careset-dept" required></select></div>
-                        <div class="form-group"><label for="new-careset-summary">患者概要</label><select id="new-careset-summary" required></select><input type="text" id="new-careset-summary-text" placeholder="概要を自由記述" style="display: none; margin-top: 5px;"></div>
-                        <div class="form-group"><label for="new-careset-supplement">補足 (任意)</label><input type="text" id="new-careset-supplement" placeholder="例: 抜管後、術後1日目 など"></div>
-                        <div class="modal-actions"><button type="submit">作成</button></div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="care-set-body">
-            <div id="care-set-am" class="care-set-group" draggable="true">
-                <h4 id="care-set-am-header">午前のケアセット</h4>
-                <div id="care-set-am-list" class="care-set-timeline-list"></div>
-            </div>
-            <div id="care-set-pm" class="care-set-group" draggable="true">
-                <h4 id="care-set-pm-header">午後のケアセット</h4>
-                <div id="care-set-pm-list" class="care-set-timeline-list"></div>
-            </div>
         </div>
     </div>
 
