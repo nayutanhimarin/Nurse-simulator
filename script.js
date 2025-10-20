@@ -210,22 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ ケアセットの定義を追加 ★★★
     // ★★★ データ構造を3階層に変更 (科 -> 概要 -> 補足) ★★★
     let careSets = {
-        '心外': {
-            '開胸術後': {
-                '(補足なし)': {
-                    am: [
-                        { name: '検温', startTime: '08:30' },
-                        { name: '清拭2', startTime: '10:00' },
-                        { name: 'リハビリ2', startTime: '11:00' },
-                    ],
-                    pm: [
-                        { name: '体位交換(挿管)', startTime: '14:00' },
-                        { name: '口腔ケア(挿管)', startTime: '15:00' },
-                    ]
-                }
-            }
-        }
         // 他の科、他の概要のセットもここに追加していく
+        // ★★★ 修正: 初期状態を空にして、どの環境でも同じ動作を保証する ★★★
     };
 
 
@@ -818,12 +804,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedSummary = careSetSummarySelect.value;
         careSetSupplementSelect.innerHTML = '<option value="">補足を選択...</option>';
 
-        if (selectedDept && selectedSummary && careSets[selectedDept]?.[selectedSummary]) {
-            Object.keys(careSets[selectedDept][selectedSummary]).sort().forEach(supplement => {
-                careSetSupplementSelect.innerHTML += `<option value="${supplement}">${supplement}</option>`;
-            });
+        // ★★★ 修正: 選択肢がない場合は、ここで処理を終了し、renderCareSetを呼ばない ★★★
+        if (!selectedDept || !selectedSummary || !careSets[selectedDept]?.[selectedSummary]) {
+            renderCareSet(); // タイムラインの表示はクリアする
+            return;
         }
-        renderCareSet(); // 補足の選択肢が変わったら表示もクリア
+
+        Object.keys(careSets[selectedDept][selectedSummary]).sort().forEach(supplement => {
+            careSetSupplementSelect.innerHTML += `<option value="${supplement}">${supplement}</option>`;
+        });
+        renderCareSet(); // 選択肢を更新した後に表示を更新
     }
 
     // ----------------------------------------
