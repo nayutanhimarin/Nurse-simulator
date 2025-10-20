@@ -707,19 +707,23 @@ document.addEventListener('DOMContentLoaded', () => {
         careSetSummarySelect = document.getElementById('care-set-summary-select');
         careSetSupplementSelect = document.getElementById('care-set-supplement-select');
 
-        // 4. 新しい要素にイベントリスナーを再設定
-        careSetDeptSelect.addEventListener('change', updateCareSetSummaryOptions);
-        careSetSummarySelect.addEventListener('change', updateCareSetSupplementOptions);
-        careSetSupplementSelect.addEventListener('change', renderCareSet);
+        // ★★★ 修正: setTimeoutを使い、DOM構築後の実行を保証する ★★★
+        setTimeout(() => {
+            // 4. 新しい要素にイベントリスナーを再設定
+            careSetDeptSelect.addEventListener('change', updateCareSetSummaryOptions);
+            careSetSummarySelect.addEventListener('change', updateCareSetSupplementOptions);
+            careSetSupplementSelect.addEventListener('change', renderCareSet);
 
-        // 5. 操作ボタンのイベントリスナーを設定
-        btnNewCareSet.addEventListener('click', handleNewCareSet);
-        btnSaveCareSet.addEventListener('click', handleSaveCareSet);
-        btnDeleteCareSet.addEventListener('click', handleDeleteCareSet);
+            // 5. 操作ボタンのイベントリスナーを設定
+            // (これらのボタンは再生成されないので、本来はここにある必要はないが、関連処理としてまとめる)
+            btnNewCareSet.addEventListener('click', handleNewCareSet);
+            btnSaveCareSet.addEventListener('click', handleSaveCareSet);
+            btnDeleteCareSet.addEventListener('click', handleDeleteCareSet);
 
-        // ★★★ 新規: 科の選択肢を初期化 ★★★
-        updateCareSetDeptOptions();
-        updateCareSetSummaryOptions(); // 概要と補足も初期状態にする
+            // 6. 科の選択肢を初期化
+            updateCareSetDeptOptions();
+            updateCareSetSummaryOptions(); // 概要と補足も初期状態にする
+        }, 0); // 待機時間は0でOK。処理をイベントキューの末尾に送ることが目的。
 
     }
 
@@ -936,16 +940,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedDept || !selectedSummary || !selectedSupplement) return;
 
         if (confirm(`ケアセット「${selectedDept} > ${selectedSummary} > ${selectedSupplement}」を本当に削除しますか？`)) {
-            delete careSets[selectedDept][selectedSummary][selectedSupplement];
-            // 概要の下に補足がなくなったら、概要ごと削除
-            if (Object.keys(careSets[selectedDept][selectedSummary]).length === 0) {
-                delete careSets[selectedDept][selectedSummary];
+            // ★★★ 修正: オブジェクトの存在を各ステップで確認する ★★★
+            const deptExists = careSets[selectedDept];
+            if (deptExists) {
+                const summaryExists = deptExists[selectedSummary];
+                if (summaryExists) {
+                    // 1. 補足レベルのセットを削除
+                    delete summaryExists[selectedSupplement];
+
+                    // 2. 概要の下に補足がなくなったら、概要ごと削除
+                    if (Object.keys(summaryExists).length === 0) {
+                        delete deptExists[selectedSummary];
+                    }
+                }
+                // 3. 科の下に概要がなくなったら、科ごと削除
+                if (Object.keys(deptExists).length === 0) {
+                    delete careSets[selectedDept];
+                }
             }
-            // 科の下に概要がなくなったら、科ごと削除
-            if (Object.keys(careSets[selectedDept]).length === 0) {
-                delete careSets[selectedDept];
-            }
-            // プルダウンを再初期化して表示を更新
             updateCareSetDeptOptions();
         }
     }
