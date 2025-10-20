@@ -49,15 +49,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ★ケアセット関連の要素
     const careSetContainer = document.getElementById('care-set-container');
-    const careSetDeptSelect = document.getElementById('care-set-dept-select');
-    const careSetSummarySelect = document.getElementById('care-set-summary-select');
+    let careSetDeptSelect = document.getElementById('care-set-dept-select');
+    let careSetSummarySelect = document.getElementById('care-set-summary-select');
+    let careSetSupplementSelect = document.getElementById('care-set-supplement-select'); // ★補足セレクタ
     const careSetAmList = document.getElementById('care-set-am-list');
     const careSetPmList = document.getElementById('care-set-pm-list');
     // ★ケアセットの操作ボタン
     const btnNewCareSet = document.getElementById('btn-new-careset');
-    const btnEditCareSet = document.getElementById('btn-edit-careset');
     const btnSaveCareSet = document.getElementById('btn-save-careset');
     const btnDeleteCareSet = document.getElementById('btn-delete-careset');
+    const careSetTrashCan = document.getElementById('care-set-trash-can'); // ★ケアセットプランナーのゴミ箱
+
+    // ★ケアセット新規作成モーダル要素
+    const newCareSetPopup = document.getElementById('new-careset-popup');
+    const newCareSetForm = document.getElementById('new-careset-form');
+    const newCareSetDeptSelect = document.getElementById('new-careset-dept');
+    const newCareSetSummarySelect = document.getElementById('new-careset-summary');
+    const newCareSetSupplementInput = document.getElementById('new-careset-supplement');
+    const newCareSetSummaryText = document.getElementById('new-careset-summary-text'); // ★新規モーダルの自由記述欄
 
 
     // 患者情報モーダル要素
@@ -199,18 +208,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const OTHER_SUMMARY_OPTION = 'その他（自由記述）';
 
     // ★★★ ケアセットの定義を追加 ★★★
-    const careSets = {
+    // ★★★ データ構造を3階層に変更 (科 -> 概要 -> 補足) ★★★
+    let careSets = {
         '心外': {
             '開胸術後': {
-                am: [
-                    { name: '検温', startTime: '08:30' },
-                    { name: '清拭2', startTime: '10:00' },
-                    { name: 'リハビリ2', startTime: '11:00' },
-                ],
-                pm: [
-                    { name: '体位交換(挿管)', startTime: '14:00' },
-                    { name: '口腔ケア(挿管)', startTime: '15:00' },
-                ]
+                '(補足なし)': {
+                    am: [
+                        { name: '検温', startTime: '08:30' },
+                        { name: '清拭2', startTime: '10:00' },
+                        { name: 'リハビリ2', startTime: '11:00' },
+                    ],
+                    pm: [
+                        { name: '体位交換(挿管)', startTime: '14:00' },
+                        { name: '口腔ケア(挿管)', startTime: '15:00' },
+                    ]
+                }
             }
         }
         // 他の科、他の概要のセットもここに追加していく
@@ -676,32 +688,249 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ 関数: ケアセットプランナーを初期化・更新 ★★★
     // ----------------------------------------
     function initializeCareSetPlanner() {
-        // 科の選択肢を作成
-        careSetDeptSelect.innerHTML = '<option value="">科を選択...</option>';
-        Object.keys(careSets).forEach(dept => {
-            careSetDeptSelect.innerHTML += `<option value="${dept}">${dept}</option>`;
-        });
+        // ★★★ 修正: 処理順序を全面的に見直し ★★★
 
-        // イベントリスナー
+        // 1. タイムラインを先に描画する
+        createCareSetTimeline('am', 8);
+        createCareSetTimeline('pm', 13);
+
+        // 2. プルダウン要素を再生成して、古いイベントリスナーを破棄する
+        const selectorsContainer = document.querySelector('.care-set-selectors');
+        selectorsContainer.innerHTML = `
+            <select id="care-set-dept-select"></select>
+            <select id="care-set-summary-select"></select>
+            <select id="care-set-supplement-select"></select>
+        `;
+
+        // 3. グローバル変数を新しい要素に再割り当て
+        careSetDeptSelect = document.getElementById('care-set-dept-select');
+        careSetSummarySelect = document.getElementById('care-set-summary-select');
+        careSetSupplementSelect = document.getElementById('care-set-supplement-select');
+
+        // 4. 新しい要素にイベントリスナーを再設定
         careSetDeptSelect.addEventListener('change', updateCareSetSummaryOptions);
-        careSetSummarySelect.addEventListener('change', renderCareSet);
+        careSetSummarySelect.addEventListener('change', updateCareSetSupplementOptions);
+        careSetSupplementSelect.addEventListener('change', renderCareSet);
 
-        // ドラッグ開始イベント
-        document.getElementById('care-set-am').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'am'));
-        document.getElementById('care-set-pm').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'pm'));
+        // 5. 操作ボタンのイベントリスナーを設定
+        btnNewCareSet.addEventListener('click', handleNewCareSet);
+        btnSaveCareSet.addEventListener('click', handleSaveCareSet);
+        btnDeleteCareSet.addEventListener('click', handleDeleteCareSet);
+
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナーのタイムラインを描画する関数 ★★★
+    // ----------------------------------------
+    function createCareSetTimeline(shift, startHour) {
+        const container = document.getElementById(`care-set-${shift}-list`);
+        container.innerHTML = `
+            <div class="care-set-timeline-header">
+                <div class="time-row care-set-hour-row"></div>
+                <div class="time-row care-set-minute-row"></div>
+            </div>
+            <div class="care-set-timeline-body">
+                <div class="timeline-row care-set-timeline-row" id="care-set-timeline-row-${shift}">
+                    <div class="grid-container"></div>
+                </div>
+            </div>
+        `;
+
+        const hourRow = container.querySelector('.care-set-hour-row');
+        const minuteRow = container.querySelector('.care-set-minute-row');
+        const gridContainer = container.querySelector('.grid-container');
+
+        // 時間ヘッダー
+        for (let h = 0; h < totalHours; h++) {
+            const hourBlock = document.createElement('div');
+            hourBlock.className = 'hour-block';
+            hourBlock.textContent = startHour + h;
+            hourRow.appendChild(hourBlock);
+        }
+
+        // 分ヘッダー
+        for (let h = 0; h < totalHours; h++) {
+            for (let m = 0; m < blocksPerHour_Header; m++) {
+                const minuteBlock = document.createElement('div');
+                minuteBlock.className = 'minute-block';
+                minuteBlock.textContent = minutes[m];
+                if (m === 3) minuteBlock.classList.add('half-hour');
+                minuteRow.appendChild(minuteBlock);
+            }
+        }
+
+        // グリッド
+        const totalCells = totalHours * blocksPerHour_Body;
+        for (let i = 0; i < totalCells; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            if ((i + 1) % 12 === 0) cell.classList.add('hour-line');
+            else if ((i + 1) % 6 === 0) cell.classList.add('half-hour-line');
+            else if ((i + 1) % 2 === 0) cell.classList.add('ten-min-line');
+            gridContainer.appendChild(cell);
+        }
+
+        // ドロップイベントリスナーを追加
+        const timelineRow = container.querySelector('.timeline-row');
+        timelineRow.addEventListener('dragover', e => e.preventDefault());
+        timelineRow.addEventListener('drop', (e) => handleDropOnCareSetTimeline(e, shift, startHour));
     }
 
     function updateCareSetSummaryOptions() {
         const selectedDept = careSetDeptSelect.value;
         careSetSummarySelect.innerHTML = '<option value="">患者概要を選択...</option>';
         if (selectedDept && careSets[selectedDept]) {
-            Object.keys(careSets[selectedDept]).forEach(summary => {
+            Object.keys(careSets[selectedDept]).sort().forEach(summary => {
                 careSetSummarySelect.innerHTML += `<option value="${summary}">${summary}</option>`;
             });
         }
-        renderCareSet(); // 概要の選択肢が変わったら表示もクリア
+        // ★★★ 修正: 続けて補足の選択肢も更新 ★★★
+        updateCareSetSupplementOptions();
     }
 
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナーの「補足」選択肢を更新 ★★★
+    // ----------------------------------------
+    function updateCareSetSupplementOptions() {
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        careSetSupplementSelect.innerHTML = '<option value="">補足を選択...</option>';
+
+        if (selectedDept && selectedSummary && careSets[selectedDept]?.[selectedSummary]) {
+            Object.keys(careSets[selectedDept][selectedSummary]).sort().forEach(supplement => {
+                careSetSupplementSelect.innerHTML += `<option value="${supplement}">${supplement}</option>`;
+            });
+        }
+        renderCareSet(); // 補足の選択肢が変わったら表示もクリア
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットの「新規」ボタン処理 ★★★
+    // ----------------------------------------
+    function handleNewCareSet() {
+        // ポップアップの表示/非表示を切り替える
+        const isHidden = newCareSetPopup.classList.contains('popup-hidden');
+        if (isHidden) {
+            // ポップアップを開く準備
+            newCareSetDeptSelect.innerHTML = '<option value="">科を選択...</option>';
+            Object.keys(departmentSummaries).sort().forEach(dept => {
+                newCareSetDeptSelect.innerHTML += `<option value="${dept}">${dept}</option>`;
+            });
+            newCareSetSummarySelect.innerHTML = '<option value="">患者概要を選択...</option>';
+            newCareSetSupplementInput.value = '';
+            newCareSetSummaryText.style.display = 'none';
+            newCareSetPopup.classList.remove('popup-hidden');
+        } else {
+            // ポップアップを閉じる
+            newCareSetPopup.classList.add('popup-hidden');
+        }
+    }
+
+    function closeNewCareSetPopup() {
+        newCareSetPopup.classList.add('popup-hidden');
+    }
+
+    function updateNewCareSetSummaryOptions() {
+        newCareSetDeptSelect.addEventListener('change', updateNewCareSetSummaryOptions);
+        newCareSetSummarySelect.addEventListener('change', toggleNewCareSetSummaryText);
+        const selectedDept = newCareSetDeptSelect.value;
+        newCareSetSummarySelect.innerHTML = '<option value="">患者概要を選択...</option>';
+        if (selectedDept && departmentSummaries[selectedDept]) {
+            departmentSummaries[selectedDept].sort().forEach(summary => {
+                newCareSetSummarySelect.innerHTML += `<option value="${summary}">${summary}</option>`;
+            });
+        }
+        // ★その他（自由記述）の選択肢を追加
+        newCareSetSummarySelect.innerHTML += `<option value="${OTHER_SUMMARY_OPTION}">${OTHER_SUMMARY_OPTION}</option>`;
+    }
+
+    // ★新規作成モーダルで自由記述欄の表示/非表示を切り替える
+    function toggleNewCareSetSummaryText() {
+        if (newCareSetSummarySelect.value === OTHER_SUMMARY_OPTION) {
+            newCareSetSummaryText.style.display = 'block';
+        } else {
+            newCareSetSummaryText.style.display = 'none';
+        }
+    }
+
+    function createNewCareSet(e) {
+        e.preventDefault();
+        const dept = newCareSetDeptSelect.value;
+        // ★自由記述が選択されているかチェック
+        const summary = (newCareSetSummarySelect.value === OTHER_SUMMARY_OPTION)
+            ? newCareSetSummaryText.value.trim()
+            : newCareSetSummarySelect.value;
+        const supplement = newCareSetSupplementInput.value.trim() || '(補足なし)';
+
+        if (!dept || !summary.trim()) {
+            alert('科と患者概要を選択してください。');
+            return;
+        }
+
+        // 階層をチェック・作成
+        if (!careSets[dept]) {
+            careSets[dept] = {};
+        }
+        if (!careSets[dept][summary]) {
+            careSets[dept][summary] = {};
+        }
+
+        // 重複チェック
+        if (careSets[dept][summary][supplement]) {
+            alert(`エラー: ケアセット「${dept} > ${summary} > ${supplement}」は既に存在します。`);
+            return;
+        }
+
+        // 新しい空のセットを作成
+        careSets[dept][summary][supplement] = { am: [], pm: [] };
+
+        // プランナーのプルダウンを更新して新しいセットを選択状態にする
+        initializeCareSetPlanner(); // ★プルダウン全体を再初期化
+        careSetDeptSelect.value = dept;
+        updateCareSetSummaryOptions();
+        careSetSummarySelect.value = summary;
+        updateCareSetSupplementOptions();
+        careSetSupplementSelect.value = supplement;
+        renderCareSet();
+
+        closeNewCareSetPopup();
+        alert('新しいケアセットが作成されました。');
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットの「登録(保存)」ボタン処理 ★★★
+    // ----------------------------------------
+    function handleSaveCareSet() {
+        // 現状、データはリアルタイムで更新されているため、このボタンは主にlocalStorageへの保存トリガーとなる。
+        alert('ケアセットの変更が保存されました。');
+        // 将来的にlocalStorageに保存する場合:
+        // localStorage.setItem('careSets', JSON.stringify(careSets));
+    }
+
+    // ----------------------------------------
+    // ★★★ 修正: ケアセットの「削除」ボタン処理 (3階層対応) ★★★
+    // ----------------------------------------
+    function handleDeleteCareSet() {
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value;
+
+        if (!selectedDept || !selectedSummary || !selectedSupplement) return;
+
+        if (confirm(`ケアセット「${selectedDept} > ${selectedSummary} > ${selectedSupplement}」を本当に削除しますか？`)) {
+            delete careSets[selectedDept][selectedSummary][selectedSupplement];
+            // 概要の下に補足がなくなったら、概要ごと削除
+            if (Object.keys(careSets[selectedDept][selectedSummary]).length === 0) {
+                delete careSets[selectedDept][selectedSummary];
+            }
+            // 科の下に概要がなくなったら、科ごと削除
+            if (Object.keys(careSets[selectedDept]).length === 0) {
+                delete careSets[selectedDept];
+            }
+            // プルダウンを再初期化して表示を更新
+            initializeCareSetPlanner();
+        }
+    }
 
     // ----------------------------------------
     // ★関数: タスク設定モーダルを開く
@@ -1446,14 +1675,134 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCareSet() {
         const selectedDept = careSetDeptSelect.value;
         const selectedSummary = careSetSummarySelect.value;
-        const set = careSets[selectedDept]?.[selectedSummary];
+        const selectedSupplement = careSetSupplementSelect.value;
 
-        careSetAmList.innerHTML = set?.am.map(t => `<div>${t.startTime} ${t.name}</div>`).join('') || '（データなし）';
-        careSetPmList.innerHTML = set?.pm.map(t => `<div>${t.startTime} ${t.name}</div>`).join('') || '（データなし）';
+        const set = careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement];
+
+        // ★★★ 修正: タイムライン形式でケアセットを描画 ★★★
+        renderCareSetShift('am', set?.am || [], 8); // setが存在しない場合は空の配列を渡す
+        renderCareSetShift('pm', set?.pm || [], 13);
     }
 
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットのシフト別タイムラインを描画 ★★★
+    // ----------------------------------------
+    function renderCareSetShift(shift, tasks, startHour) {
+        const timelineRow = document.getElementById(`care-set-timeline-row-${shift}`);
+        // 既存のタスクブロックをクリア
+        timelineRow.querySelectorAll('.task-block').forEach(el => el.remove());
 
+        if (!tasks.length) return;
 
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+
+        tasks.forEach((task, index) => {
+            const originalTask = Object.values(careTasks).flatMap(c => c.items).find(t => t.name === task.name);
+            if (!originalTask) return;
+
+            const [hour, minute] = task.startTime.split(':').map(Number);
+            const offsetMinutes = (hour - startHour) * 60 + minute;
+
+            const left = (offsetMinutes / 5) * fiveMinBlockWidth;
+            const width = (originalTask.time * 5 / 5) * fiveMinBlockWidth;
+
+            const taskEl = document.createElement('div');
+            taskEl.className = 'task-block';
+            taskEl.dataset.taskName = task.name;
+            taskEl.dataset.shift = shift;
+            taskEl.dataset.taskIndex = index; // 配列内のインデックスを保持
+            taskEl.style.left = `${left}px`;
+            taskEl.style.width = `${width}px`;
+            taskEl.textContent = task.name;
+            taskEl.title = `${task.name} (${originalTask.staff}人, ${originalTask.time * 5}分)`;
+            taskEl.draggable = true;
+
+            // ドラッグ開始（移動）
+            taskEl.addEventListener('dragstart', (e) => {
+                // ★ゴミ箱での削除用に、タスクの識別情報をセット
+                e.dataTransfer.setData('text/care-set-task', JSON.stringify({
+                    shift: shift,
+                    index: index
+                }));
+                e.stopPropagation();
+            });
+            taskEl.addEventListener('dragstart', (e) => handleCareSetTaskDrag(e, shift, index));
+            // クリック（削除）
+            taskEl.addEventListener('click', () => deleteCareSetTask(shift, index));
+
+            timelineRow.appendChild(taskEl);
+        });
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナーへのドロップ処理 ★★★
+    // ----------------------------------------
+    function handleDropOnCareSetTimeline(e, shift, startHour) {
+        e.preventDefault();
+        const taskDataJSON = e.dataTransfer.getData('text/plain');
+        if (!taskDataJSON) return; // ケアリストからのドロップでなければ無視
+
+        const taskData = JSON.parse(taskDataJSON);
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value;
+
+        if (!selectedDept || !selectedSummary || !selectedSupplement) {
+            alert('先に「科」「患者概要」「補足」を選択してください。');
+            return;
+        }
+
+        // ドロップ位置から開始時刻を計算
+        const timelineRow = document.getElementById(`care-set-timeline-row-${shift}`);
+        const rect = timelineRow.getBoundingClientRect();
+        const dropX = e.clientX - rect.left;
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+        const blockIndex = Math.floor(dropX / fiveMinBlockWidth);
+        const minutesFromStart = blockIndex * 5;
+        const hour = startHour + Math.floor(minutesFromStart / 60);
+        const minute = minutesFromStart % 60;
+        const startTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+        // careSetsオブジェクトを更新
+        careSets[selectedDept][selectedSummary][selectedSupplement][shift].push({ name: taskData.name, startTime: startTime });
+        renderCareSet(); // 再描画
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナーのゴミ箱へのドロップ処理 ★★★
+    // ----------------------------------------
+    function handleDropOnCareSetTrash(e) {
+        e.preventDefault();
+        careSetTrashCan.classList.remove('drag-over');
+        const taskInfoJSON = e.dataTransfer.getData('text/care-set-task');
+        if (!taskInfoJSON) return; // プランナー内のタスクでなければ無視
+
+        const { shift, index } = JSON.parse(taskInfoJSON);
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value;
+
+        if (careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]) {
+            careSets[selectedDept][selectedSummary][selectedSupplement][shift].splice(index, 1);
+            renderCareSet(); // 再描画
+        }
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナー内のタスクを削除する関数 ★★★
+    // ----------------------------------------
+    function deleteCareSetTask(shift, index) {
+        if (!confirm('このケア項目を削除しますか？')) return;
+
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value;
+
+        if (careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]) {
+            careSets[selectedDept][selectedSummary][selectedSupplement][shift].splice(index, 1);
+            renderCareSet(); // 再描画
+        }
+    }
     // ----------------------------------------
     // ★関数: タスク要素を生成してDOMに追加
     // ----------------------------------------
@@ -1868,11 +2217,42 @@ document.addEventListener('DOMContentLoaded', () => {
     btnDeleteScenario.addEventListener('click', deleteScenario);
     scenarioSelect.addEventListener('change', loadScenario);
 
+    // ★ポップアップの外側をクリックしたら閉じる
+    document.addEventListener('click', (e) => {
+        const isClickInsidePopup = newCareSetPopup.contains(e.target);
+        const isClickOnNewButton = btnNewCareSet.contains(e.target);
+        if (!isClickInsidePopup && !isClickOnNewButton) {
+            closeNewCareSetPopup();
+        }
+    });
+    // ★ケアセットプランナーのゴミ箱のイベントリスナー
+    careSetTrashCan.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (Array.from(e.dataTransfer.types).includes('text/care-set-task')) {
+            careSetTrashCan.classList.add('drag-over');
+        }
+    });
+    careSetTrashCan.addEventListener('dragleave', () => {
+        careSetTrashCan.classList.remove('drag-over');
+    });
+    careSetTrashCan.addEventListener('drop', handleDropOnCareSetTrash);
+
+
 
 
     // ----------------------------------------
     // 初期描画
     // ----------------------------------------
+    // ★ケアセットのドラッグイベントリスナーを初期設定
+    document.getElementById('care-set-am-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'am'));
+    document.getElementById('care-set-pm-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'pm'));
+    
+    // ★ケアセット新規作成フォームのイベントリスナーを初期設定
+    newCareSetForm.addEventListener('submit', createNewCareSet);
+    newCareSetDeptSelect.addEventListener('change', updateNewCareSetSummaryOptions);
+    newCareSetSummarySelect.addEventListener('change', toggleNewCareSetSummaryText);
+
+
     initializeBedDisplays(); // ★ベッド表示を初期化
     updateDisplay();
     initializeCareTabs(); // ★ケアリストのタブを初期化
