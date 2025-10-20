@@ -269,6 +269,7 @@ body {
     justify-content: flex-start; /* 左詰め */
     align-items: center;
     gap: 20px;
+    flex-wrap: wrap; /* ★幅が足りなくなったら折り返すように変更 */
     margin-bottom: 0;
 }
 .control-group {
@@ -657,3 +658,55 @@ body {
     width: 30%; /* 3列に並べる */
     display: inline-flex;
 }
+
+/* ▼▼▼ シナリオ管理コントロールのスタイルを修正（再）▼▼▼ */
+/* シナリオ管理ブロックに固有のIDを付与してスタイルを適用 */
+#scenario-control-group {
+    gap: 8px; /* 要素間の隙間を調整 */
+    justify-content: center; /* ★中央揃えにする */
+    margin: 0 auto 10px; /* ★上下左右の余白を調整 */
+}
+
+#scenario-control-group > label {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+#scenario-control-group > select,
+#scenario-control-group > input[type="text"] {
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* ★シナリオ名入力欄が空きスペースを埋めるように広がる */
+#scenario-control-group > input[type="text"] {
+    flex-grow: 1;
+}
+
+/* ▲▲▲ シナリオ管理コントロールのスタイルを修正（再）▲▲▲ */
+
+/* ▼▼▼ ケアセットプランナーのスタイルを追加 ▼▼▼ */
+.care-set-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.care-set-header h4 {
+    margin: 0;
+    flex-shrink: 0; /* タイトルが縮まないようにする */
+}
+
+.care-set-selectors {
+    display: flex;
+    gap: 5px;
+    flex-grow: 1; /* 空きスペースを埋めるように広がる */
+}
+
+.care-set-actions {
+    display: flex;
+    gap: 5px;
+}
+/* ▲▲▲ ケアセットプランナーのスタイルを追加 ▲▲▲ */

@@ -17,6 +17,16 @@
                 <h1>&#x1F469;&#x200D;&#x2695;&#xFE0F; ICUリーダー采配シミュレーター</h1>
             </div>
 
+            <!-- ▼▼▼ シナリオ管理コントロールをここに移動 ▼▼▼ -->
+            <div class="control-group" id="scenario-control-group">
+                <label for="scenario-select">シナリオ:</label>
+                <select id="scenario-select"></select>
+                <input type="text" id="scenario-name" placeholder="新しいシナリオ名">
+                <button id="btn-save-scenario">保存</button>
+                <button id="btn-delete-scenario" class="danger-btn">削除</button>
+            </div>
+            <!-- ▲▲▲ シナリオ管理コントロールをここに移動 ▲▲▲ -->
+
             <div class="ward-display-area">
                 <div class="ward-row" id="south-ward-row">
                     <button id="btn-south" class="ward-tab tab-button">南病棟</button>
@@ -79,10 +89,16 @@
             <!-- ▼▼▼ ケアセットコンテナを追加 ▼▼▼ -->
             <div id="care-set-container" class="care-set-container-hidden">
                 <div class="care-set-header">
-                    <h4>&#x1F4DC; ケアセットプランナー(未実装)</h4>
+                    <h4>&#x1F4DC; ケアセットプランナー</h4>
                     <div class="care-set-selectors">
                         <select id="care-set-dept-select"></select>
                         <select id="care-set-summary-select"></select>
+                    </div>
+                    <div class="care-set-actions">
+                        <button id="btn-new-careset">新規</button>
+                        <button id="btn-edit-careset">編集</button>
+                        <button id="btn-save-careset" style="display: none;">保存</button>
+                        <button id="btn-delete-careset" class="danger-btn">削除</button>
                     </div>
                 </div>
                 <div class="care-set-body">

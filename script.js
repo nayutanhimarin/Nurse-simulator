@@ -53,6 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const careSetSummarySelect = document.getElementById('care-set-summary-select');
     const careSetAmList = document.getElementById('care-set-am-list');
     const careSetPmList = document.getElementById('care-set-pm-list');
+    // ★ケアセットの操作ボタン
+    const btnNewCareSet = document.getElementById('btn-new-careset');
+    const btnEditCareSet = document.getElementById('btn-edit-careset');
+    const btnSaveCareSet = document.getElementById('btn-save-careset');
+    const btnDeleteCareSet = document.getElementById('btn-delete-careset');
+
 
     // 患者情報モーダル要素
     const patientModalOverlay = document.getElementById('patient-modal-overlay');
@@ -84,6 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const nurseLevelSelect = document.getElementById('nurse-level');
     const nurseBedList = document.getElementById('nurse-bed-list');
 
+    // シナリオ管理要素
+    const scenarioSelect = document.getElementById('scenario-select');
+    const scenarioNameInput = document.getElementById('scenario-name');
+    const btnSaveScenario = document.getElementById('btn-save-scenario');
+    const btnDeleteScenario = document.getElementById('btn-delete-scenario');
 
 
     // ----------------------------------------
@@ -1154,6 +1165,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 task.startTime <= targetTime &&
                 task.endTime > targetTime
             ).length;
+
+            // ★★★ 3. 前後30分のタスク密度を計算 ★★★
+            let densityBonus = 0;
+            const windowStart = new Date(targetTime.getTime() - 30 * 60000);
+            const windowEnd = new Date(targetTime.getTime() + 30 * 60000);
+
+            const tasksInWindow = placedTasks.filter(task =>
+                task.assignedNurses.includes(nurseName) &&
+                task.startTime < windowEnd &&
+                task.endTime > windowStart
+            );
+
+            if (tasksInWindow.length >= 2) {
+                // 多忙ボーナス: 2つ以上のタスクがあればレベル+2
+                densityBonus = 2;
+            } else if (tasksInWindow.length > 0) {
+                // 高密度ボーナス: 1つ以上のタスクがある場合、合計時間を計算
+                let totalDurationInWindow = 0;
+                tasksInWindow.forEach(task => {
+                    const overlapStart = Math.max(task.startTime, windowStart);
+                    const overlapEnd = Math.min(task.endTime, windowEnd);
+                    totalDurationInWindow += (overlapEnd - overlapStart) / 60000; // 分に変換
+                });
+                if (totalDurationInWindow >= 55) {
+                    densityBonus = 1;
+                }
+            }
     
             // 3. 新しいルールに基づいてヒートマップレベルを決定
             let level = 1; // デフォルトレベル
@@ -1179,6 +1217,9 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (totalSeverity >= 1 && totalSeverity <= 4 && careCount === 1) level = 1;
     
             // 4. レベルに応じた色を適用
+            // ★★★ 密度ボーナスをレベルに加算（最大5） ★★★
+            level = Math.min(level + densityBonus, 5);
+
             const colors = ['#e6f5e6', '#ffffcc', '#ffe6b3', '#ffcc99', '#ffb380']; // 1, 2, 3, 4, 5
             block.style.backgroundColor = colors[level - 1];
         });
@@ -1424,6 +1465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskEl.style.left = `${left}px`;
         taskEl.style.width = `${width}px`;
         taskEl.textContent = task.name;
+        taskEl.title = task.name; // ★ホバー時にフルネームをツールチップで表示
 
         // ★★★ 修正: 人員不足の場合に警告スタイルを適用 ★★★
         if (task.isUnderstaffed) {
@@ -1556,6 +1598,116 @@ document.addEventListener('DOMContentLoaded', () => {
         // ★★★ 修正: ボードとタスクの描画が完了した後にヒートマップを更新 ★★★
         updatePatientDisplayForAllBeds(); // まず患者概要を更新
         updateHeatmap(); // 次にヒートマップを計算・適用
+    }
+
+    // ----------------------------------------
+    // ★★★ シナリオ管理機能 ★★★
+    // ----------------------------------------
+
+    // 現在のアプリケーションの状態をオブジェクトとして取得する
+    function getCurrentState() {
+        // DateオブジェクトはJSONに直接保存できないため、ISO文字列に変換
+        const serializableTasks = placedTasks.map(task => ({
+            ...task,
+            startTime: task.startTime.toISOString(),
+            endTime: task.endTime.toISOString(),
+        }));
+
+        return {
+            northNurseCount: countNorthInput.value,
+            southNurseCount: countSouthInput.value,
+            patientData: patientData,
+            nurseSettings: nurseSettings,
+            placedTasks: serializableTasks,
+        };
+    }
+
+    // 状態オブジェクトをアプリケーションに適用する
+    function applyState(state) {
+        // 各状態を復元
+        countNorthInput.value = state.northNurseCount || '6';
+        countSouthInput.value = state.southNurseCount || '7';
+        patientData = state.patientData || {};
+        nurseSettings = state.nurseSettings || {};
+
+        // ISO文字列からDateオブジェクトに復元
+        placedTasks = state.placedTasks.map(task => ({
+            ...task,
+            startTime: new Date(task.startTime),
+            endTime: new Date(task.endTime),
+        }));
+
+        // 画面全体を再描画
+        updateDisplay();
+    }
+
+    // 保存されているシナリオをlocalStorageから取得する
+    function getSavedScenarios() {
+        const scenariosJSON = localStorage.getItem('icu_scenarios');
+        return scenariosJSON ? JSON.parse(scenariosJSON) : {};
+    }
+
+    // シナリオリストをドロップダウンに読み込む
+    function loadScenarioList() {
+        const scenarios = getSavedScenarios();
+        const currentSelectedValue = scenarioSelect.value;
+        scenarioSelect.innerHTML = '<option value="">シナリオを選択...</option>';
+
+        for (const name in scenarios) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            scenarioSelect.appendChild(option);
+        }
+        // 以前選択されていた項目を再選択する
+        if (scenarios[currentSelectedValue]) {
+            scenarioSelect.value = currentSelectedValue;
+        }
+    }
+
+    // 現在の状態をシナリオとして保存する
+    function saveScenario() {
+        const name = scenarioNameInput.value.trim();
+        if (!name) {
+            alert('シナリオ名を入力してください。');
+            return;
+        }
+
+        const scenarios = getSavedScenarios();
+        scenarios[name] = getCurrentState();
+
+        localStorage.setItem('icu_scenarios', JSON.stringify(scenarios));
+        scenarioNameInput.value = '';
+        loadScenarioList();
+        scenarioSelect.value = name; // 保存したシナリオを選択状態にする
+        alert(`シナリオ「${name}」を保存しました。`);
+    }
+
+    // 選択されたシナリオを読み込む
+    function loadScenario() {
+        const name = scenarioSelect.value;
+        if (!name) return;
+
+        const scenarios = getSavedScenarios();
+        const state = scenarios[name];
+
+        if (state) {
+            applyState(state);
+            alert(`シナリオ「${name}」を読み込みました。`);
+        }
+    }
+
+    // 選択されたシナリオを削除する
+    function deleteScenario() {
+        const name = scenarioSelect.value;
+        if (!name) return;
+
+        if (confirm(`シナリオ「${name}」を本当に削除しますか？`)) {
+            const scenarios = getSavedScenarios();
+            delete scenarios[name];
+            localStorage.setItem('icu_scenarios', JSON.stringify(scenarios));
+            loadScenarioList();
+        }
     }
 
     // ----------------------------------------
@@ -1711,6 +1863,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHeatmap(); // ★ヒートマップを更新
     });
 
+    // ★シナリオ管理のイベントリスナー
+    btnSaveScenario.addEventListener('click', saveScenario);
+    btnDeleteScenario.addEventListener('click', deleteScenario);
+    scenarioSelect.addEventListener('change', loadScenario);
+
+
 
     // ----------------------------------------
     // 初期描画
@@ -1720,6 +1878,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeCareTabs(); // ★ケアリストのタブを初期化
     renderCareList(currentCareCategory); // ★ケアリストの初期描画
     initializeCareSetPlanner(); // ★ケアセットプランナーを初期化
+    loadScenarioList(); // ★保存済みシナリオを読み込む
 
     // ★初期の病棟選択状態をスタイルに反映
     northWardRow.classList.add('active');
