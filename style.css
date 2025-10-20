@@ -800,11 +800,13 @@ body {
 }
 
 #new-careset-popup {
-    position: absolute;
-    top: 100%; /* ボタンの真下に表示 */
-    left: 0;
+    /* ★★★ 修正: 画面中央に固定表示するスタイル ★★★ */
+    position: fixed; /* 画面を基準に位置を固定 */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* 要素自身のサイズを考慮して中央に配置 */
     width: 400px;
-    z-index: 100;
+    z-index: 1002; /* 他のモーダルやプランナーより手前に表示 */
     background-color: #fff;
     padding: 20px 30px;
     border-radius: 8px;

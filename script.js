@@ -693,23 +693,25 @@ document.addEventListener('DOMContentLoaded', () => {
         careSetSummarySelect = document.getElementById('care-set-summary-select');
         careSetSupplementSelect = document.getElementById('care-set-supplement-select');
 
-        // ★★★ 修正: setTimeoutを使い、DOM構築後の実行を保証する ★★★
-        setTimeout(() => {
-            // 4. 新しい要素にイベントリスナーを再設定
-            careSetDeptSelect.addEventListener('change', updateCareSetSummaryOptions);
-            careSetSummarySelect.addEventListener('change', updateCareSetSupplementOptions);
-            careSetSupplementSelect.addEventListener('change', renderCareSet);
+        // ★★★ 修正: requestAnimationFrameを使い、DOM構築後の実行をより確実に保証する ★★★
+        requestAnimationFrame(() => {
+            // DOMが確実に準備できた後で処理を実行
+            requestAnimationFrame(() => {
+                // 4. 新しい要素にイベントリスナーを再設定
+                careSetDeptSelect.addEventListener('change', updateCareSetSummaryOptions);
+                careSetSummarySelect.addEventListener('change', updateCareSetSupplementOptions);
+                careSetSupplementSelect.addEventListener('change', renderCareSet);
 
-            // 5. 操作ボタンのイベントリスナーを設定
-            // (これらのボタンは再生成されないので、本来はここにある必要はないが、関連処理としてまとめる)
-            btnNewCareSet.addEventListener('click', handleNewCareSet);
-            btnSaveCareSet.addEventListener('click', handleSaveCareSet);
-            btnDeleteCareSet.addEventListener('click', handleDeleteCareSet);
+                // 5. 操作ボタンのイベントリスナーを設定
+                btnNewCareSet.addEventListener('click', handleNewCareSet);
+                btnSaveCareSet.addEventListener('click', handleSaveCareSet);
+                btnDeleteCareSet.addEventListener('click', handleDeleteCareSet);
 
-            // 6. 科の選択肢を初期化
-            updateCareSetDeptOptions();
-            updateCareSetSummaryOptions(); // 概要と補足も初期状態にする
-        }, 0); // 待機時間は0でOK。処理をイベントキューの末尾に送ることが目的。
+                // 6. 科の選択肢を初期化
+                updateCareSetDeptOptions();
+                updateCareSetSummaryOptions(); // 概要と補足も初期状態にする
+            });
+        });
 
     }
 
@@ -820,6 +822,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ 新規: ケアセットの「新規」ボタン処理 ★★★
     // ----------------------------------------
     function handleNewCareSet() {
+        // ★★★ 修正: ポップアップをbody直下に移動させ、中央に表示する ★★★
+        if (newCareSetPopup.parentNode !== document.body) {
+            document.body.appendChild(newCareSetPopup);
+        }
+
         // ポップアップの表示/非表示を切り替える
         const isHidden = newCareSetPopup.classList.contains('popup-hidden');
         if (isHidden) {
