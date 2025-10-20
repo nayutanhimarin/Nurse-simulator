@@ -14,7 +14,7 @@ body {
 
 /* 5分 (1コマ) の幅を定義します */
 :root {
-    --col-width-5min: 8px; 
+    --col-width-5min: 10px; 
     --col-width-10min: calc(var(--col-width-5min) * 2);
     --row-height: 24px; 
 
@@ -47,6 +47,9 @@ body {
     flex-direction: column;
     gap: 15px;
     overflow-y: auto; /* ★メインパネルの縦スクロールを有効化 */
+    padding-left: 20px; /* ★サイドパネルとの距離を確保 */
+    border-left: 1px solid #ccc; /* ★区切り線 */
+    box-sizing: border-box; /* ★paddingとborderを幅に含める */
 }
 .side-panel {
     width: 300px;
