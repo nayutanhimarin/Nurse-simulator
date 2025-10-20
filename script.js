@@ -1723,7 +1723,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
 
         tasks.forEach((task, index) => {
-            const originalTask = Object.values(careTasks).flatMap(c => c.items).find(t => t.name === task.name);
+            // ★★★ 修正: カテゴリとタスク定義を同時に見つける ★★★
+            let originalTask = null;
+            let taskCategory = null;
+            for (const category in careTasks) {
+                const found = careTasks[category].items.find(t => t.name === task.name);
+                if (found) {
+                    originalTask = found;
+                    taskCategory = category;
+                    break;
+                }
+            }
             if (!originalTask) return;
 
             const [hour, minute] = task.startTime.split(':').map(Number);
@@ -1734,6 +1744,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const taskEl = document.createElement('div');
             taskEl.className = 'task-block';
+            taskEl.dataset.category = taskCategory; // ★★★ 追加: カテゴリをdata属性に設定して色を適用 ★★★
             taskEl.dataset.taskName = task.name;
             taskEl.dataset.shift = shift;
             taskEl.dataset.taskIndex = index; // 配列内のインデックスを保持
@@ -1743,16 +1754,7 @@ document.addEventListener('DOMContentLoaded', () => {
             taskEl.title = `${task.name} (${originalTask.staff}人, ${originalTask.time * 5}分)`;
             taskEl.draggable = true;
 
-            // ドラッグ開始（移動）
-            taskEl.addEventListener('dragstart', (e) => {
-                // ★ゴミ箱での削除用に、タスクの識別情報をセット
-                e.dataTransfer.setData('text/care-set-task', JSON.stringify({
-                    shift: shift,
-                    index: index
-                }));
-                e.stopPropagation();
-            });
-            taskEl.addEventListener('dragstart', (e) => handleCareSetTaskDrag(e, shift, index));
+            taskEl.addEventListener('dragstart', (e) => handleCareSetTaskDrag(e, shift, index)); // ★★★ 修正: ドラッグ開始イベントリスナー ★★★
             // クリック（削除）
             taskEl.addEventListener('click', () => deleteCareSetTask(shift, index));
 
@@ -1761,13 +1763,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナー内のタスクのドラッグ開始処理 ★★★
+    // ----------------------------------------
+    function handleCareSetTaskDrag(e, shift, index) {
+        // ゴミ箱での削除用と、タイムライン内での移動用の両方のデータをセット
+        const taskInfo = {
+            shift: shift,
+            index: index
+        };
+        e.dataTransfer.setData('text/care-set-task', JSON.stringify(taskInfo));
+        e.dataTransfer.setData('text/care-set-task-move', JSON.stringify(taskInfo)); // 移動用
+        e.dataTransfer.effectAllowed = 'move';
+        e.stopPropagation();
+    }
+
+    // ----------------------------------------
     // ★★★ 新規: ケアセットプランナーへのドロップ処理 ★★★
     // ----------------------------------------
     function handleDropOnCareSetTimeline(e, shift, startHour) {
         e.preventDefault();
-        const taskDataJSON = e.dataTransfer.getData('text/plain');
-        if (!taskDataJSON) return; // ケアリストからのドロップでなければ無視
+        // ★★★ 修正: 最初に移動処理を試みる ★★★
+        const taskDataJSON = e.dataTransfer.getData('text/plain'); // ケアリストからのデータ
 
+        // ★★★ 追加: プランナー内での移動ドロップ処理 ★★★
+        const moveDataJSON = e.dataTransfer.getData('text/care-set-task-move');
+        if (moveDataJSON) {
+            const { shift: sourceShift, index } = JSON.parse(moveDataJSON);
+            // 同じシフト内での移動のみ許可
+            if (sourceShift === shift) {
+                handleMoveCareSetTask(e, shift, index, startHour);
+            } else {
+                // 異なるシフトへの移動は現在サポートしない（必要ならここに実装）
+            }
+            return; // 移動処理が完了したので、新規追加処理は行わない
+        }
+
+        // ★★★ 修正: ケアリストからのドロップでなければここで処理を終了 ★★★
+        if (!taskDataJSON) {
+            return;
+        }
+        // --- 以下はケアリストからの新規ドロップ処理 ---
         const taskData = JSON.parse(taskDataJSON);
         const selectedDept = careSetDeptSelect.value;
         const selectedSummary = careSetSummarySelect.value;
@@ -1791,6 +1826,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // careSetsオブジェクトを更新
         careSets[selectedDept][selectedSummary][selectedSupplement][shift].push({ name: taskData.name, startTime: startTime });
+        saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
+        renderCareSet(); // 再描画
+    }
+
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナー内のタスクを移動する処理 ★★★
+    // ----------------------------------------
+    function handleMoveCareSetTask(e, shift, index, startHour) {
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value;
+
+        const taskToMove = careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]?.[index];
+        if (!taskToMove) return;
+
+        // ドロップ位置から新しい開始時刻を計算
+        const timelineRow = document.getElementById(`care-set-timeline-row-${shift}`);
+        const rect = timelineRow.getBoundingClientRect();
+        const dropX = e.clientX - rect.left;
+        const fiveMinBlockWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-width-5min'));
+        const blockIndex = Math.floor(dropX / fiveMinBlockWidth);
+        const minutesFromStart = blockIndex * 5;
+        const hour = startHour + Math.floor(minutesFromStart / 60);
+        const minute = minutesFromStart % 60;
+        const newStartTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+        // タスクの開始時刻を更新
+        taskToMove.startTime = newStartTime;
+
+        saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
         renderCareSet(); // 再描画
     }
 
@@ -1810,7 +1875,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]) {
             careSets[selectedDept][selectedSummary][selectedSupplement][shift].splice(index, 1);
-            saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
+            saveAllDataToServer(); // ★★★ 修正: 変更を保存する処理を追加 ★★★
             renderCareSet(); // 再描画
         }
     }
