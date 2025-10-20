@@ -210,10 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ ケアセットの定義を追加 ★★★
     // ★★★ データ構造を3階層に変更 (科 -> 概要 -> 補足) ★★★
     let careSets = {
-        // 他の科、他の概要のセットもここに追加していく
-        // ★★★ 修正: 初期状態を空にして、どの環境でも同じ動作を保証する ★★★
     };
-
 
     // ----------------------------------------
     // 状態管理
@@ -920,10 +917,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ 新規: ケアセットの「登録(保存)」ボタン処理 ★★★
     // ----------------------------------------
     function handleSaveCareSet() {
-        // 現状、データはリアルタイムで更新されているため、このボタンは主にlocalStorageへの保存トリガーとなる。
+        // ★サーバーへの保存関数を呼び出す
+        saveAllDataToServer();
         alert('ケアセットの変更が保存されました。');
-        // 将来的にlocalStorageに保存する場合:
-        // localStorage.setItem('careSets', JSON.stringify(careSets));
     }
 
     // ----------------------------------------
@@ -955,6 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     delete careSets[selectedDept];
                 }
             }
+            saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
             updateCareSetDeptOptions();
         }
     }
@@ -1285,6 +1282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 5. タスクをデータストアに追加し、再描画
         placedTasks.push(newTask);
+        updateHeatmap(); // ★ヒートマップを更新
         renderAllTasks();
         closeTaskModal();
     }
@@ -1373,6 +1371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ★★★ 修正: 設定変更後にヒートマップを即時更新する ★★★
         updateHeatmap();
 
+        saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
         closeNurseModal();
     });
 
@@ -1635,6 +1634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         updatePatientDisplay(editingBedId);
+        saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
         closePatientModal();
     });
 
@@ -1810,6 +1810,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]) {
             careSets[selectedDept][selectedSummary][selectedSupplement][shift].splice(index, 1);
+            saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
             renderCareSet(); // 再描画
         }
     }
@@ -1826,6 +1827,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]) {
             careSets[selectedDept][selectedSummary][selectedSupplement][shift].splice(index, 1);
+            saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
             renderCareSet(); // 再描画
         }
     }
@@ -1979,6 +1981,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ シナリオ管理機能 ★★★
     // ----------------------------------------
 
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ データ永続化のための中心的な関数 (ここを将来書き換える) ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    /**
+     * @description サーバーからすべてのデータを読み込む (現在はlocalStorageを代用)
+     */
+    async function loadAllDataFromServer() {
+        console.log("データをサーバーから読み込み中... (現在はlocalStorageを使用)");
+        try {
+            // --- 将来のサーバー実装 (例) ---
+            // const response = await fetch('https://<あなたのサーバーアドレス>/api/data');
+            // if (!response.ok) throw new Error('サーバーからのデータ取得に失敗しました。');
+            // const data = await response.json();
+            // return data;
+
+            // --- 現在のlocalStorage実装 ---
+            const dataJSON = localStorage.getItem('icu_simulator_data');
+            if (dataJSON) {
+                return JSON.parse(dataJSON);
+            } else {
+                // データがない場合は初期状態を返す
+                return { scenarios: {}, careSets: {} };
+            }
+        } catch (error) {
+            console.error("データの読み込みに失敗しました:", error);
+            alert("データの読み込みに失敗しました。");
+            return { scenarios: {}, careSets: {} }; // エラー時も空のデータを返す
+        }
+    }
+
+    /**
+     * @description すべてのデータをサーバーに保存する (現在はlocalStorageを代用)
+     */
+    async function saveAllDataToServer() {
+        console.log("データをサーバーに保存中... (現在はlocalStorageを使用)");
+        try {
+            const scenarios = getSavedScenariosFromState(); // 現在のシナリオ状態を取得
+            const dataToSave = {
+                scenarios: scenarios,
+                careSets: careSets
+            };
+
+            // --- 将来のサーバー実装 (例) ---
+            // await fetch('https://<あなたのサーバーアドレス>/api/data', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify(dataToSave)
+            // });
+
+            // --- 現在のlocalStorage実装 ---
+            localStorage.setItem('icu_simulator_data', JSON.stringify(dataToSave));
+
+        } catch (error) {
+            console.error("データの保存に失敗しました:", error);
+            alert("データの保存に失敗しました。");
+        }
+    }
+
     // 現在のアプリケーションの状態をオブジェクトとして取得する
     function getCurrentState() {
         // DateオブジェクトはJSONに直接保存できないため、ISO文字列に変換
@@ -2017,14 +2078,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 保存されているシナリオをlocalStorageから取得する
-    function getSavedScenarios() {
-        const scenariosJSON = localStorage.getItem('icu_scenarios');
-        return scenariosJSON ? JSON.parse(scenariosJSON) : {};
+    function getSavedScenariosFromState() {
+        const scenariosJSON = localStorage.getItem('icu_simulator_data');
+        return scenariosJSON ? (JSON.parse(scenariosJSON).scenarios || {}) : {};
     }
 
     // シナリオリストをドロップダウンに読み込む
-    function loadScenarioList() {
-        const scenarios = getSavedScenarios();
+    function loadScenarioList(scenarios) {
+        // 引数で渡されたシナリオデータを使用
+        scenarios = scenarios || {};
         const currentSelectedValue = scenarioSelect.value;
         scenarioSelect.innerHTML = '<option value="">シナリオを選択...</option>'; // ★初期値を設定
 
@@ -2048,12 +2110,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const scenarios = getSavedScenarios();
-        scenarios[name] = getCurrentState();
-
-        localStorage.setItem('icu_scenarios', JSON.stringify(scenarios));
+        // ★新しい状態を保存
+        saveAllDataToServer();
         scenarioNameInput.value = '';
-        loadScenarioList();
+        loadScenarioList(getSavedScenariosFromState()); // ★リストを再読み込み
         scenarioSelect.value = name; // 保存したシナリオを選択状態にする
         alert(`シナリオ「${name}」を保存しました。`);
     }
@@ -2063,12 +2123,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = scenarioSelect.value;
         if (!name) return;
 
-        const scenarios = getSavedScenarios();
+        const scenarios = getSavedScenariosFromState();
         const state = scenarios[name];
 
         if (state) {
             applyState(state);
-            alert(`シナリオ「${name}」を読み込みました。`);
+            alert(`シナリオ「${name}」を読み込みました。`); // ★読み込み完了を通知
         }
     }
 
@@ -2077,11 +2137,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = scenarioSelect.value;
         if (!name) return;
 
+        // ★★★ 修正: 削除処理をsaveAllDataToServerに委ねる準備 ★★★
         if (confirm(`シナリオ「${name}」を本当に削除しますか？`)) {
-            const scenarios = getSavedScenarios();
+            const scenarios = getSavedScenariosFromState();
             delete scenarios[name];
-            localStorage.setItem('icu_scenarios', JSON.stringify(scenarios));
-            loadScenarioList();
+            // ★削除後に保存
+            saveAllDataToServer();
+            loadScenarioList(scenarios);
         }
     }
 
@@ -2306,26 +2368,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------
     // 初期描画
     // ----------------------------------------
-    // ★ケアセットのドラッグイベントリスナーを初期設定
-    document.getElementById('care-set-am-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'am'));
-    document.getElementById('care-set-pm-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'pm'));
-    
-    // ★ケアセット新規作成フォームのイベントリスナーを初期設定
-    newCareSetForm.addEventListener('submit', createNewCareSet);
-    newCareSetDeptSelect.addEventListener('change', updateNewCareSetSummaryOptions);
-    newCareSetSummarySelect.addEventListener('change', toggleNewCareSetSummaryText);
+    async function initializeApp() {
+        // 1. サーバーからデータを読み込む
+        const data = await loadAllDataFromServer();
+        careSets = data.careSets || {};
+        const scenarios = data.scenarios || {};
+
+        // 2. UIの初期化
+        initializeBedDisplays();
+        updateDisplay();
+        initializeCareTabs();
+        renderCareList(currentCareCategory);
+        initializeCareSetPlanner();
+        loadScenarioList(scenarios); // ★読み込んだシナリオデータを使ってリストを作成
+
+        // 3. イベントリスナーの設定
+        document.getElementById('care-set-am-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'am'));
+        document.getElementById('care-set-pm-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'pm'));
+        newCareSetForm.addEventListener('submit', createNewCareSet);
+        newCareSetDeptSelect.addEventListener('change', updateNewCareSetSummaryOptions);
+        newCareSetSummarySelect.addEventListener('change', toggleNewCareSetSummaryText);
+
+        // ★初期の病棟選択状態をスタイルに反映
+        northWardRow.classList.add('active');
+    }
 
     // ★ケアセットプランナーをドラッグ可能にする
     const careSetHeader = document.querySelector('.care-set-header');
     makeDraggable(careSetContainer, careSetHeader);
 
-    initializeBedDisplays(); // ★ベッド表示を初期化
-    updateDisplay();
-    initializeCareTabs(); // ★ケアリストのタブを初期化
-    renderCareList(currentCareCategory); // ★ケアリストの初期描画
-    initializeCareSetPlanner(); // ★ケアセットプランナーを初期化
-    loadScenarioList(); // ★保存済みシナリオを読み込む
-
-    // ★初期の病棟選択状態をスタイルに反映
-    northWardRow.classList.add('active');
+    initializeApp(); // ★アプリケーションを初期化する新しい関数を呼び出す
 });
