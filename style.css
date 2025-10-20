@@ -734,18 +734,11 @@ body {
 
 /* --- ケアセットプランナーのタイムライン用スタイル --- */
 .care-set-container {
-    /* ★フローティングパネル化 */
-    position: absolute;
-    top: 150px;
-    left: 20px;
-    width: fit-content; /* ★★★ 修正: 中身の幅に合わせる ★★★ */
-    z-index: 500;
-
+    /* ★★★ 修正: フローティング用のスタイルを削除し、通常のブロック要素として表示 ★★★ */
     background-color: #fdfdfd;
     border: 1px solid #ccc;
     padding: 10px;
     border-radius: 5px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 .care-set-header {
     flex-wrap: wrap; /* ★★★ 追加: 要素がはみ出したら折り返す ★★★ */
@@ -756,6 +749,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+/* ★★★ プランナー本体を非表示にするためのクラス ★★★ */
+.careset-body-hidden {
+    display: none !important;
 }
 .care-set-section {
     margin-bottom: 15px;

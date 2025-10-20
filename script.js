@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSaveCareSet = document.getElementById('btn-save-careset');
     const btnDeleteCareSet = document.getElementById('btn-delete-careset');
     const careSetTrashCan = document.getElementById('care-set-trash-can'); // ★ケアセットプランナーのゴミ箱
+    const btnToggleCareSetPlanner = document.getElementById('btn-toggle-careset-planner'); // ★★★ 表示/非表示ボタン
 
     // ★ケアセット新規作成モーダル要素
     const newCareSetPopup = document.getElementById('new-careset-popup');
@@ -1703,6 +1704,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedSummary = careSetSummarySelect.value;
         const selectedSupplement = careSetSupplementSelect.value;
 
+        // ★★★ 修正: タイムラインの骨格を毎回再描画する ★★★
+        createCareSetTimeline('am', 8);
+        createCareSetTimeline('pm', 13);
+
         const set = careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement];
 
         // ★★★ 修正: タイムライン形式でケアセットを描画 ★★★
@@ -2031,8 +2036,6 @@ document.addEventListener('DOMContentLoaded', () => {
             patientSummaryHeader.textContent = '患者概要';
             namesArea.style.width = ''; // CSSで定義された元の幅に戻す
             renderBedBoard(currentWard);
-            // ★ベッドボード表示の時だけケアセットプランナーを表示
-            careSetContainer.classList.remove('care-set-container-hidden');
         }
 
         // ★ボード描画後に、配置済みタスクも描画する
@@ -2213,6 +2216,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナーの表示/非表示を切り替える関数 ★★★
+    // ----------------------------------------
+    function toggleCareSetPlanner() {
+        document.querySelector('.care-set-body').classList.toggle('careset-body-hidden');
+    }
+    // ----------------------------------------
     // 関数: 時間軸をクリアする
     // ----------------------------------------
     function clearTimelineHeader() {
@@ -2283,6 +2292,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateDisplay() {
         renderMainArea(); // renderWardから変更
         createTimeline(currentShiftStartHour);
+        renderCareList(currentCareCategory); // ★★★ 追加: ボード切り替え時にケアリストも再描画する
+        renderCareSet(); // ★★★ 追加: ボード切り替え時にケアセットの表示も再描画する
         timelineArea.scrollLeft = 0; // スクロール位置をリセット
     }
 
@@ -2293,8 +2304,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentViewMode = 'nurse';
         btnNurseBoard.classList.add('active');
         btnBedBoard.classList.remove('active');
-        // ★看護師ボードではケアセットプランナーを非表示
-        careSetContainer.classList.add('care-set-container-hidden');
         updateDisplay();
     });
 
@@ -2381,6 +2390,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★ケアセットプランナーのゴミ箱のイベントリスナー
     careSetTrashCan.addEventListener('dragover', (e) => {
         e.preventDefault();
+        // ★★★ 修正: ドラッグデータタイプのチェックをより安全に ★★★
+        if (!e.dataTransfer.types.includes('text/care-set-task')) return;
+
         if (Array.from(e.dataTransfer.types).includes('text/care-set-task')) {
             careSetTrashCan.classList.add('drag-over');
         }
@@ -2389,6 +2401,9 @@ document.addEventListener('DOMContentLoaded', () => {
         careSetTrashCan.classList.remove('drag-over');
     });
     careSetTrashCan.addEventListener('drop', handleDropOnCareSetTrash);
+
+    // ★★★ 新規: ケアセットプランナーの表示/非表示ボタンのイベントリスナー ★★★
+    btnToggleCareSetPlanner.addEventListener('click', toggleCareSetPlanner);
 
     // ----------------------------------------
     // ★★★ 新規: 要素をドラッグ可能にする関数 ★★★
