@@ -54,6 +54,7 @@ body {
     display: flex;
     border: 1px solid #ccc;
     background-color: #fff;
+    width: fit-content; /* ★★★ 修正: 中身の幅に合わせる ★★★ */
 }
 .left-column-group {
     display: flex;
@@ -73,7 +74,7 @@ body {
 }
 .timeline-area {
     overflow-x: auto; /* ★横スクロールをここに設定 */
-    flex-grow: 1;
+    flex-grow: 0; /* ★★★ 修正: コンテナが不必要に伸びないようにする ★★★ */
 }
 
 /* タイムライン全体 (★横スクロールをtimeline-areaに移管) */
@@ -431,6 +432,7 @@ body {
 
 .ward-display-area {
     margin-bottom: 0;
+    width: fit-content; /* ★★★ 追加: 中身の幅に合わせる ★★★ */
 }
 .ward-row {
     display: flex;
@@ -704,15 +706,13 @@ body {
 .care-set-selectors {
     display: flex;
     gap: 5px;
-    flex-grow: 1; /* 空きスペースを埋めるように広がる */
 }
 .care-set-selectors select {
     /* ★セレクタが3つになっても均等に広がるように */
-    flex-grow: 1;
-    min-width: 100px;
 }
 
 .care-set-actions {
+    /* ★★★ 修正: width指定を削除し、自然な折り返しに任せる ★★★ */
     display: flex;
     gap: 5px;
     position: relative; /* ★ポップアップの基準点にする */
@@ -725,7 +725,7 @@ body {
     position: absolute;
     top: 150px;
     left: 20px;
-    width: 900px; /* 幅を固定 */
+    width: fit-content; /* ★★★ 修正: 中身の幅に合わせる ★★★ */
     z-index: 500;
 
     background-color: #fdfdfd;
@@ -735,7 +735,14 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 .care-set-header {
+    flex-wrap: wrap; /* ★★★ 追加: 要素がはみ出したら折り返す ★★★ */
     cursor: move; /* ★ドラッグ可能であることを示す */
+}
+.care-set-body {
+    /* ★★★ 追加: 午前と午後のタイムラインを縦に並べる ★★★ */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 .care-set-section {
     margin-bottom: 15px;
