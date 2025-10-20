@@ -721,12 +721,22 @@ body {
 
 /* --- ケアセットプランナーのタイムライン用スタイル --- */
 .care-set-container {
+    /* ★フローティングパネル化 */
+    position: absolute;
+    top: 150px;
+    left: 20px;
+    width: 900px; /* 幅を固定 */
+    z-index: 500;
+
     background-color: #fdfdfd;
     border: 1px solid #ccc;
     padding: 10px;
     border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
-
+.care-set-header {
+    cursor: move; /* ★ドラッグ可能であることを示す */
+}
 .care-set-section {
     margin-bottom: 15px;
 }

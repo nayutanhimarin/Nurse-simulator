@@ -717,6 +717,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSaveCareSet.addEventListener('click', handleSaveCareSet);
         btnDeleteCareSet.addEventListener('click', handleDeleteCareSet);
 
+        // ★★★ 新規: 科の選択肢を初期化 ★★★
+        updateCareSetDeptOptions();
+        updateCareSetSummaryOptions(); // 概要と補足も初期状態にする
+
     }
 
     // ----------------------------------------
@@ -776,6 +780,17 @@ document.addEventListener('DOMContentLoaded', () => {
         timelineRow.addEventListener('drop', (e) => handleDropOnCareSetTimeline(e, shift, startHour));
     }
 
+    // ----------------------------------------
+    // ★★★ 新規: ケアセットプランナーの「科」選択肢を更新 ★★★
+    // ----------------------------------------
+    function updateCareSetDeptOptions() {
+        careSetDeptSelect.innerHTML = '<option value="">科を選択...</option>';
+        // careSetsに存在する科だけをリストアップ
+        Object.keys(careSets).sort().forEach(dept => {
+            careSetDeptSelect.innerHTML += `<option value="${dept}">${dept}</option>`;
+        });
+    }
+
     function updateCareSetSummaryOptions() {
         const selectedDept = careSetDeptSelect.value;
         careSetSummarySelect.innerHTML = '<option value="">患者概要を選択...</option>';
@@ -783,6 +798,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(careSets[selectedDept]).sort().forEach(summary => {
                 careSetSummarySelect.innerHTML += `<option value="${summary}">${summary}</option>`;
             });
+        } else {
+            // 科が選択されていない場合は、概要の選択肢もリセット
+            careSetSummarySelect.innerHTML = '<option value="">患者概要を選択...</option>';
         }
         // ★★★ 修正: 続けて補足の選択肢も更新 ★★★
         updateCareSetSupplementOptions();
@@ -885,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
         careSets[dept][summary][supplement] = { am: [], pm: [] };
 
         // プランナーのプルダウンを更新して新しいセットを選択状態にする
-        initializeCareSetPlanner(); // ★プルダウン全体を再初期化
+        updateCareSetDeptOptions(); // ★科のプルダウンを更新
         careSetDeptSelect.value = dept;
         updateCareSetSummaryOptions();
         careSetSummarySelect.value = summary;
@@ -928,7 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete careSets[selectedDept];
             }
             // プルダウンを再初期化して表示を更新
-            initializeCareSetPlanner();
+            updateCareSetDeptOptions();
         }
     }
 
@@ -2000,7 +2018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadScenarioList() {
         const scenarios = getSavedScenarios();
         const currentSelectedValue = scenarioSelect.value;
-        scenarioSelect.innerHTML = '<option value="">シナリオを選択...</option>';
+        scenarioSelect.innerHTML = '<option value="">シナリオを選択...</option>'; // ★初期値を設定
 
         for (const name in scenarios) {
             const option = document.createElement('option');
@@ -2237,6 +2255,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     careSetTrashCan.addEventListener('drop', handleDropOnCareSetTrash);
 
+    // ----------------------------------------
+    // ★★★ 新規: 要素をドラッグ可能にする関数 ★★★
+    // ----------------------------------------
+    function makeDraggable(element, handle) {
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        handle.addEventListener('mousedown', (e) => {
+            // ポップアップやボタンなど、特定の要素上でのドラッグは無効化
+            if (e.target.closest('select, button, input, #new-careset-popup')) {
+                return;
+            }
+            isDragging = true;
+            offsetX = e.clientX - element.offsetLeft;
+            offsetY = e.clientY - element.offsetTop;
+            element.style.userSelect = 'none'; // ドラッグ中のテキスト選択を防ぐ
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            let newX = e.clientX - offsetX;
+            let newY = e.clientY - offsetY;
+
+            // 画面外に出ないように制限
+            newX = Math.max(0, Math.min(newX, window.innerWidth - element.offsetWidth));
+            newY = Math.max(0, Math.min(newY, window.innerHeight - element.offsetHeight));
+
+            element.style.left = `${newX}px`;
+            element.style.top = `${newY}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            element.style.userSelect = '';
+        });
+    }
 
 
 
@@ -2252,6 +2307,9 @@ document.addEventListener('DOMContentLoaded', () => {
     newCareSetDeptSelect.addEventListener('change', updateNewCareSetSummaryOptions);
     newCareSetSummarySelect.addEventListener('change', toggleNewCareSetSummaryText);
 
+    // ★ケアセットプランナーをドラッグ可能にする
+    const careSetHeader = document.querySelector('.care-set-header');
+    makeDraggable(careSetContainer, careSetHeader);
 
     initializeBedDisplays(); // ★ベッド表示を初期化
     updateDisplay();

@@ -85,58 +85,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ▼▼▼ ケアセットコンテナを追加 ▼▼▼ -->
-            <div id="care-set-container" class="care-set-container-hidden">
-                <div class="care-set-header">
-                    <h4>&#x1F4DC; ケアセットプランナー</h4>
-                    <div class="care-set-selectors">
-                        <select id="care-set-dept-select"></select>
-                        <select id="care-set-summary-select"></select>
-                        <select id="care-set-supplement-select"></select>
-                    </div>
-                    <div class="care-set-actions">
-                        <button id="btn-new-careset">新規</button>
-                        <button id="btn-save-careset">登録</button>
-                        <button id="btn-delete-careset" class="danger-btn">削除</button>
-                        <div id="care-set-trash-can" class="trash-can-area">&#x1F5D1;</div>
-
-                        <!-- ▼▼▼ ケアセット新規作成ポップアップをここに移動 ▼▼▼ -->
-                        <div id="new-careset-popup" class="popup-hidden">
-                            <form id="new-careset-form">
-                                <h4>ケアセット新規作成</h4>
-                                <div class="form-group">
-                                    <label for="new-careset-dept">科</label>
-                                    <select id="new-careset-dept" required></select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="new-careset-summary">患者概要</label>
-                                    <select id="new-careset-summary" required></select>
-                                    <input type="text" id="new-careset-summary-text" placeholder="概要を自由記述" style="display: none; margin-top: 5px;">
-                                </div>
-                                <div class="form-group">
-                                    <label for="new-careset-supplement">補足 (任意)</label>
-                                    <input type="text" id="new-careset-supplement" placeholder="例: 抜管後、術後1日目 など">
-                                </div>
-                                <div class="modal-actions">
-                                    <button type="submit">作成</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="care-set-body">
-                    <div id="care-set-am" class="care-set-group" draggable="true">
-                        <h4 id="care-set-am-header">午前のケアセット</h4>
-                        <div id="care-set-am-list" class="care-set-timeline-list"></div>
-                    </div>
-                    <div id="care-set-pm" class="care-set-group" draggable="true">
-                        <h4 id="care-set-pm-header">午後のケアセット</h4>
-                        <div id="care-set-pm-list" class="care-set-timeline-list"></div>
-                    </div>
-                </div>
-            </div>
-            <!-- ▲▲▲ ケアセットコンテナを追加 ▲▲▲ -->
         </div>
         <!-- ▲▲▲ ここまでメインパネル ▲▲▲ -->
 
@@ -288,6 +236,43 @@
         </div>
     </div>
 
+    <!-- ▼▼▼ ケアセットコンテナをここに移動（フローティング化） ▼▼▼ -->
+    <div id="care-set-container" class="care-set-container-hidden">
+        <div class="care-set-header">
+            <h4>&#x1F4DC; ケアセットプランナー</h4>
+            <div class="care-set-selectors">
+                <select id="care-set-dept-select"></select>
+                <select id="care-set-summary-select"></select>
+                <select id="care-set-supplement-select"></select>
+            </div>
+            <div class="care-set-actions">
+                <button id="btn-new-careset">新規</button>
+                <button id="btn-save-careset">登録</button>
+                <button id="btn-delete-careset" class="danger-btn">削除</button>
+                <div id="care-set-trash-can" class="trash-can-area">&#x1F5D1;</div>
+
+                <div id="new-careset-popup" class="popup-hidden">
+                    <form id="new-careset-form">
+                        <h4>ケアセット新規作成</h4>
+                        <div class="form-group"><label for="new-careset-dept">科</label><select id="new-careset-dept" required></select></div>
+                        <div class="form-group"><label for="new-careset-summary">患者概要</label><select id="new-careset-summary" required></select><input type="text" id="new-careset-summary-text" placeholder="概要を自由記述" style="display: none; margin-top: 5px;"></div>
+                        <div class="form-group"><label for="new-careset-supplement">補足 (任意)</label><input type="text" id="new-careset-supplement" placeholder="例: 抜管後、術後1日目 など"></div>
+                        <div class="modal-actions"><button type="submit">作成</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="care-set-body">
+            <div id="care-set-am" class="care-set-group" draggable="true">
+                <h4 id="care-set-am-header">午前のケアセット</h4>
+                <div id="care-set-am-list" class="care-set-timeline-list"></div>
+            </div>
+            <div id="care-set-pm" class="care-set-group" draggable="true">
+                <h4 id="care-set-pm-header">午後のケアセット</h4>
+                <div id="care-set-pm-list" class="care-set-timeline-list"></div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
