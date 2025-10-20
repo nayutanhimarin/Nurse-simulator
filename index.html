@@ -124,9 +124,9 @@
                     </div>
                     <div class="care-set-actions">
                         <button id="btn-new-careset">新規</button>
+                        <button id="btn-apply-careset">配置</button> <!-- ★★★ 配置ボタンを追加 ★★★ -->
                         <button id="btn-save-careset">登録</button>
                         <button id="btn-delete-careset" class="danger-btn">削除</button>
-                        <div id="care-set-trash-can" class="trash-can-area">&#x1F5D1;</div>
 
                         <div id="new-careset-popup" class="popup-hidden">
                             <form id="new-careset-form">
@@ -140,11 +140,11 @@
                     </div>
                 </div>
                 <div class="care-set-body">
-                    <div id="care-set-am" class="care-set-group" draggable="true">
+                    <div id="care-set-am" class="care-set-group"> <!-- ★★★ draggableを削除 ★★★ -->
                         <h4 id="care-set-am-header">午前のケアセット</h4>
                         <div id="care-set-am-list" class="care-set-timeline-list"></div>
                     </div>
-                    <div id="care-set-pm" class="care-set-group" draggable="true">
+                    <div id="care-set-pm" class="care-set-group"> <!-- ★★★ draggableを削除 ★★★ -->
                         <h4 id="care-set-pm-header">午後のケアセット</h4>
                         <div id="care-set-pm-list" class="care-set-timeline-list"></div>
                     </div>
@@ -272,6 +272,21 @@
                 </div>
                 <div class="modal-actions"><button type="submit">決定</button><button type="button" id="nurse-modal-cancel">キャンセル</button></div>
             </form>
+        </div>
+    </div>
+
+    <!-- ★★★ ケアセット配置用モーダルを追加 ★★★ -->
+    <div id="apply-careset-modal-overlay" class="modal-hidden">
+        <div id="apply-careset-modal">
+            <h2>ケアセット配置先ベッド選択</h2>
+            <p>現在選択中のシフトのケアセットを配置するベッドを選択してください。</p>
+            <div id="apply-careset-bed-list" class="modal-checkbox-list">
+                <!-- JSでベッドリストが生成されます -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="apply-careset-confirm-btn">配置</button>
+                <button type="button" id="apply-careset-cancel-btn">キャンセル</button>
+            </div>
         </div>
     </div>
 

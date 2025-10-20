@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnNewCareSet = document.getElementById('btn-new-careset');
     const btnSaveCareSet = document.getElementById('btn-save-careset');
     const btnDeleteCareSet = document.getElementById('btn-delete-careset');
-    const careSetTrashCan = document.getElementById('care-set-trash-can'); // ★ケアセットプランナーのゴミ箱
     const btnToggleCareSetPlanner = document.getElementById('btn-toggle-careset-planner'); // ★★★ 表示/非表示ボタン
+    const btnApplyCareSet = document.getElementById('btn-apply-careset'); // ★★★ 配置ボタン
 
     // ★ケアセット新規作成モーダル要素
     const newCareSetPopup = document.getElementById('new-careset-popup');
@@ -68,6 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const newCareSetSummarySelect = document.getElementById('new-careset-summary');
     const newCareSetSupplementInput = document.getElementById('new-careset-supplement');
     const newCareSetSummaryText = document.getElementById('new-careset-summary-text'); // ★新規モーダルの自由記述欄
+
+    // ★★★ ケアセット配置モーダル要素
+    const applyCareSetModalOverlay = document.getElementById('apply-careset-modal-overlay');
+    const applyCareSetBedList = document.getElementById('apply-careset-bed-list');
+    const applyCareSetConfirmBtn = document.getElementById('apply-careset-confirm-btn');
+    const applyCareSetCancelBtn = document.getElementById('apply-careset-cancel-btn');
 
 
     // 患者情報モーダル要素
@@ -970,7 +976,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // モーダルにタスク名と開始時刻を設定
-        modalTaskName.textContent = taskData.name;
+        // ★★★ 修正: タスク名と必要人数を両方表示する ★★★
+        const requiredStaff = tempTaskDataForModal.staff || 1;
+        modalTaskName.textContent = `${taskData.name}（必要人数: ${requiredStaff}人）`;
+
         // ★★★ 5分単位に丸めてからHH:mm 形式にフォーマット ★★★
         const roundedMinutes = Math.round(startTime.getMinutes() / 5) * 5;
         const roundedStartTime = new Date(startTime);
@@ -1240,13 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const assignedBed = modalBedSelect.value;
         const [hour, minute] = modalStartTime.value.split(':');
 
-        // ★★★ 人数チェックのロジックを追加 ★★★
-        const requiredStaff = tempTaskDataForModal.staff;
-        const selectedStaff = assignedNurses.length;
-        if (requiredStaff !== selectedStaff) {
-            alert(`このタスクには ${requiredStaff} 人の看護師が必要です。\n現在 ${selectedStaff} 人選択されています。`);
-            return; // 人数が合わない場合は処理を中断
-        }
+        // ★★★ 人数チェックと人員不足フラグの設定 ★★★
+        // ★★★ 修正: tempTaskDataForModalにstaffプロパティがない場合があるため、元のタスク定義から取得し直す ★★★
+        const originalTaskDefinition = careTasks[tempTaskDataForModal.category]?.items.find(item => item.name === tempTaskDataForModal.name);
+        const requiredStaff = originalTaskDefinition ? originalTaskDefinition.staff : 1;
 
         // 2. 開始時刻と終了時刻をDateオブジェクトとして生成
         const startTime = new Date();
@@ -1265,7 +1271,8 @@ document.addEventListener('DOMContentLoaded', () => {
             duration: durationMinutes,
             assignedNurses: assignedNurses,
             assignedBed: assignedBed,
-            displayRows: {} // この時点では空
+            displayRows: {}, // この時点では空
+            isUnderstaffed: requiredStaff > assignedNurses.length
         };
 
         // ★★★ 4. 配置場所を探す（重複チェック） ★★★
@@ -1286,6 +1293,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHeatmap(); // ★ヒートマップを更新
         renderAllTasks();
         closeTaskModal();
+
+        // ★★★ 追加: 人員不足の場合に警告を表示 ★★★
+        if (newTask.isUnderstaffed) {
+            alert(`注意: タスク「${newTask.name}」は人員不足（必要: ${requiredStaff}人, 割り当て: ${assignedNurses.length}人）のまま配置されました。`);
+        }
     }
 
     // ----------------------------------------
@@ -1667,15 +1679,73 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
-    // ★★★ 関数: ケアセットのドラッグを開始 ★★★
+    // ★★★ 新規: ケアセットをベッドにドロップした時の処理 ★★★
+    // ----------------------------------------
+    function handleCareSetDropOnBed(e, bedId) {
+        e.preventDefault();
+        const careSetDataJSON = e.dataTransfer.getData('application/json');
+        if (!careSetDataJSON) return; // ケアセットのデータでなければ何もしない
+
+        const { tasks: taskSet } = JSON.parse(careSetDataJSON);
+
+        // 1. このベッドの担当看護師を探す
+        let assignedNurse = null;
+        for (const nurseName in nurseSettings) {
+            if (nurseSettings[nurseName].assignedBeds?.includes(bedId)) {
+                assignedNurse = nurseName;
+                break; // 1人見つけたらループを抜ける
+            }
+        }
+
+        if (!assignedNurse) {
+            alert(`ベッド ${bedId} の担当看護師が見つかりません。\n先に看護師設定で基本担当ベッドを割り当ててください。`);
+            return;
+        }
+
+        // 2. セット内のタスクを一つずつ配置していく
+        const tasksToAdd = [];
+        for (const taskInfo of taskSet) {
+            const originalTask = Object.values(careTasks).flatMap(c => c.items).find(t => t.name === taskInfo.name);
+            if (!originalTask) continue;
+
+            const [hour, minute] = taskInfo.startTime.split(':');
+            const startTime = new Date();
+            startTime.setHours(parseInt(hour, 10), parseInt(minute, 10), 0, 0);
+            const durationMinutes = originalTask.time * 5;
+
+            const newTask = {
+                id: `task_${Date.now()}_${Math.random()}`,
+                name: originalTask.name,
+                category: taskInfo.category,
+                startTime,
+                endTime: new Date(startTime.getTime() + durationMinutes * 60000),
+                duration: durationMinutes,
+                assignedNurses: [assignedNurse], // ★まず担当看護師1人を割り当てる
+                assignedBed: bedId,
+                displayRows: {},
+                isUnderstaffed: originalTask.staff > 1 // ★人員不足フラグ
+            };
+            tasksToAdd.push(newTask);
+        }
+
+        // 3. 全てのタスクをまとめて追加 & 再描画
+        placedTasks.push(...tasksToAdd);
+        renderAllTasks();
+        updateHeatmap();
+        alert(`ケアセットをベッド${bedId}の担当看護師(${assignedNurse})に適用しました。`);
+    }
+
+    // ----------------------------------------
+    // ★★★ 関数: ケアセットのドラッグを開始 (修正) ★★★
     // ----------------------------------------
     function handleCareSetDrag(e, shift) {
         const selectedDept = careSetDeptSelect.value;
         const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value; // ★★★ 追加 ★★★
 
-        if (!selectedDept || !selectedSummary) return;
+        if (!selectedDept || !selectedSummary || !selectedSupplement) return;
 
-        const taskSet = careSets[selectedDept]?.[selectedSummary]?.[shift];
+        const taskSet = careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]; // ★★★ 修正 ★★★
         if (!taskSet) return;
 
         // カテゴリ情報を付与して送信
@@ -1865,27 +1935,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
-    // ★★★ 新規: ケアセットプランナーのゴミ箱へのドロップ処理 ★★★
-    // ----------------------------------------
-    function handleDropOnCareSetTrash(e) {
-        e.preventDefault();
-        careSetTrashCan.classList.remove('drag-over');
-        const taskInfoJSON = e.dataTransfer.getData('text/care-set-task');
-        if (!taskInfoJSON) return; // プランナー内のタスクでなければ無視
-
-        const { shift, index } = JSON.parse(taskInfoJSON);
-        const selectedDept = careSetDeptSelect.value;
-        const selectedSummary = careSetSummarySelect.value;
-        const selectedSupplement = careSetSupplementSelect.value;
-
-        if (careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement]?.[shift]) {
-            careSets[selectedDept][selectedSummary][selectedSupplement][shift].splice(index, 1);
-            saveAllDataToServer(); // ★★★ 修正: 変更を保存する処理を追加 ★★★
-            renderCareSet(); // 再描画
-        }
-    }
-
-    // ----------------------------------------
     // ★★★ 新規: ケアセットプランナー内のタスクを削除する関数 ★★★
     // ----------------------------------------
     function deleteCareSetTask(shift, index) {
@@ -1981,12 +2030,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const assignedBed = modalBedSelect.value;
         const [hour, minute] = modalStartTime.value.split(':');
 
-        // ★★★ 人数チェック ★★★
+        // ★★★ 人数チェックと人員不足フラグの設定 ★★★
         const requiredStaff = tempTaskDataForModal.staff;
-        if (requiredStaff && requiredStaff !== assignedNurses.length) {
-            alert(`このタスクには ${requiredStaff} 人の看護師が必要です。\n現在 ${assignedNurses.length} 人選択されています。`);
-            return;
-        }
 
         // 2. 更新後のタスク情報で仮オブジェクトを作成
         const taskToUpdate = { ...placedTasks[taskIndex] }; // コピーを作成
@@ -1994,6 +2039,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskToUpdate.endTime = new Date(taskToUpdate.startTime.getTime() + taskToUpdate.duration * 60000);
         taskToUpdate.assignedNurses = assignedNurses;
         taskToUpdate.assignedBed = assignedBed;
+        taskToUpdate.isUnderstaffed = requiredStaff > assignedNurses.length;
 
         // ★★★ 3. 配置場所を探す（重複チェック） ★★★
         const placementResult = findPlacement(taskToUpdate);
@@ -2008,6 +2054,11 @@ document.addEventListener('DOMContentLoaded', () => {
         taskToUpdate.displayRows = placementResult.displayRows;
 
         // 4. 元のタスクを更新し、再描画
+        // ★★★ 追加: 人員不足の場合に警告を表示 ★★★
+        if (taskToUpdate.isUnderstaffed) {
+            alert(`注意: タスク「${taskToUpdate.name}」は人員不足（必要: ${requiredStaff}人, 割り当て: ${assignedNurses.length}人）のまま更新されました。`);
+        }
+
         placedTasks[taskIndex] = taskToUpdate;
         renderAllTasks();
         closeTaskModal();
@@ -2216,6 +2267,120 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------
+    // ★★★ 新規: ケアセット配置モーダル関連の関数 ★★★
+    // ----------------------------------------
+    function openApplyCareSetModal() {
+        applyCareSetBedList.innerHTML = ''; // リストをクリア
+
+        // 南病棟
+        const southGroup = document.createElement('div');
+        southGroup.className = 'ward-group';
+        southGroup.innerHTML = '<h4>南病棟</h4>';
+        const southBedList = generateBedList(beds.south).reverse();
+        southBedList.forEach(bedId => {
+            const item = document.createElement('div'); // ★ bed-radio-item から bed-checkbox-item にクラス名を変更
+            item.className = 'bed-checkbox-item';
+            item.innerHTML = `<input type="checkbox" name="apply-bed" value="${bedId}" id="apply-bed-${bedId}"><label for="apply-bed-${bedId}">${bedId}</label>`; // ★ radio から checkbox に変更
+            southGroup.appendChild(item);
+        });
+        applyCareSetBedList.appendChild(southGroup);
+ 
+        // 北病棟
+        const northGroup = document.createElement('div');
+        northGroup.className = 'ward-group';
+        northGroup.innerHTML = '<h4>北病棟</h4>';
+        const northBedList = generateBedList(beds.north);
+        northBedList.forEach(bedId => {
+            const item = document.createElement('div');
+            item.className = 'bed-checkbox-item'; // ★ bed-radio-item から bed-checkbox-item にクラス名を変更
+            item.innerHTML = `<input type="checkbox" name="apply-bed" value="${bedId}" id="apply-bed-${bedId}"><label for="apply-bed-${bedId}">${bedId}</label>`; // ★ radio から checkbox に変更
+            northGroup.appendChild(item);
+        });
+        applyCareSetBedList.appendChild(northGroup);
+
+        applyCareSetModalOverlay.classList.remove('modal-hidden');
+    }
+
+    function closeApplyCareSetModal() {
+        applyCareSetModalOverlay.classList.add('modal-hidden');
+    }
+
+    function handleApplyCareSetConfirm() {
+        // 1. 選択されたベッドのIDを取得 (複数選択対応)
+        const selectedBedCheckboxes = applyCareSetBedList.querySelectorAll('input[name="apply-bed"]:checked');
+        if (selectedBedCheckboxes.length === 0) {
+            alert('配置先のベッドを選択してください。');
+            return;
+        }
+        const targetBedIds = Array.from(selectedBedCheckboxes).map(cb => cb.value);
+
+        // 2. 現在選択されているケアセットを取得
+        const selectedDept = careSetDeptSelect.value;
+        const selectedSummary = careSetSummarySelect.value;
+        const selectedSupplement = careSetSupplementSelect.value;
+
+        if (!selectedDept || !selectedSummary || !selectedSupplement) {
+            alert('配置するケアセットが選択されていません。');
+            return;
+        }
+        const careSet = careSets[selectedDept]?.[selectedSummary]?.[selectedSupplement];
+        if (!careSet) {
+            alert('選択されたケアセットのデータが見つかりません。');
+            return;
+        }
+
+        // 3. 現在アクティブなシフト（午前/午後）を判定し、対応するタスクリストを取得
+        const isAm = currentShiftStartHour === 8;
+        const taskSet = isAm ? careSet.am : careSet.pm;
+
+        if (!taskSet || taskSet.length === 0) {
+            alert(`選択されたケアセットには、${isAm ? '午前' : '午後'}のタスクが登録されていません。`);
+            return;
+        }
+
+        // 4. 選択された各ベッドにケアセットのタスクを配置
+        const tasksToAdd = [];
+        targetBedIds.forEach(bedId => {
+            // このベッドの担当看護師を探す
+            let assignedNurse = null;
+            for (const nurseName in nurseSettings) {
+                if (nurseSettings[nurseName].assignedBeds?.includes(bedId)) {
+                    assignedNurse = nurseName;
+                    break;
+                }
+            }
+
+            if (!assignedNurse) {
+                console.warn(`ベッド ${bedId} の担当看護師が見つかりませんでした。タスクは配置されますが、担当者が未設定になります。`);
+            }
+
+            taskSet.forEach(taskInfo => {
+                const originalTask = Object.values(careTasks).flatMap(c => c.items).find(t => t.name === taskInfo.name);
+                if (!originalTask) return;
+
+                const [hour, minute] = taskInfo.startTime.split(':');
+                const startTime = new Date();
+                startTime.setHours(parseInt(hour, 10), parseInt(minute, 10), 0, 0);
+                const durationMinutes = originalTask.time * 5;
+
+                // 新しいタスクオブジェクトを作成
+                const newTask = {
+                    id: `task_${Date.now()}_${Math.random()}`, name: originalTask.name, category: Object.keys(careTasks).find(key => careTasks[key].items.some(item => item.name === originalTask.name)), startTime, endTime: new Date(startTime.getTime() + durationMinutes * 60000), duration: durationMinutes, assignedNurses: assignedNurse ? [assignedNurse] : [], // 担当者がいれば設定
+                    assignedBed: bedId, displayRows: {}, isUnderstaffed: originalTask.staff > (assignedNurse ? 1 : 0)
+                };
+                tasksToAdd.push(newTask);
+            });
+        });
+
+        // 5. 全てのタスクをまとめて追加 & 再描画
+        placedTasks.push(...tasksToAdd);
+        renderAllTasks();
+        updateHeatmap();
+        closeApplyCareSetModal();
+        alert(`${targetBedIds.length}床のベッドにケアセットを配置しました。\n※重複チェックは行われないため、必要に応じて調整してください。`);
+    }
+
+    // ----------------------------------------
     // ★★★ 新規: ケアセットプランナーの表示/非表示を切り替える関数 ★★★
     // ----------------------------------------
     function toggleCareSetPlanner() {
@@ -2388,22 +2553,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     // ★ケアセットプランナーのゴミ箱のイベントリスナー
-    careSetTrashCan.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        // ★★★ 修正: ドラッグデータタイプのチェックをより安全に ★★★
-        if (!e.dataTransfer.types.includes('text/care-set-task')) return;
-
-        if (Array.from(e.dataTransfer.types).includes('text/care-set-task')) {
-            careSetTrashCan.classList.add('drag-over');
-        }
-    });
-    careSetTrashCan.addEventListener('dragleave', () => {
-        careSetTrashCan.classList.remove('drag-over');
-    });
-    careSetTrashCan.addEventListener('drop', handleDropOnCareSetTrash);
 
     // ★★★ 新規: ケアセットプランナーの表示/非表示ボタンのイベントリスナー ★★★
     btnToggleCareSetPlanner.addEventListener('click', toggleCareSetPlanner);
+
+    // ★★★ 新規: ケアセット配置ボタンとモーダルのイベントリスナー ★★★
+    btnApplyCareSet.addEventListener('click', openApplyCareSetModal);
+    applyCareSetCancelBtn.addEventListener('click', closeApplyCareSetModal);
+    applyCareSetConfirmBtn.addEventListener('click', handleApplyCareSetConfirm);
 
     // ----------------------------------------
     // ★★★ 新規: 要素をドラッグ可能にする関数 ★★★
@@ -2463,8 +2620,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loadScenarioList(scenarios); // ★読み込んだシナリオデータを使ってリストを作成
 
         // 3. イベントリスナーの設定
-        document.getElementById('care-set-am-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'am'));
-        document.getElementById('care-set-pm-header').addEventListener('dragstart', (e) => handleCareSetDrag(e, 'pm'));
         newCareSetForm.addEventListener('submit', createNewCareSet);
         newCareSetDeptSelect.addEventListener('change', updateNewCareSetSummaryOptions);
         newCareSetSummarySelect.addEventListener('change', toggleNewCareSetSummaryText);
@@ -2474,8 +2629,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ★ケアセットプランナーをドラッグ可能にする
-    const careSetHeader = document.querySelector('.care-set-header');
-    makeDraggable(careSetContainer, careSetHeader);
 
     initializeApp(); // ★アプリケーションを初期化する新しい関数を呼び出す
 });

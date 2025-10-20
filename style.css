@@ -492,7 +492,8 @@ body {
 
 #modal-overlay,
 #nurse-modal-overlay, /* ★看護師設定モーダルにも適用 */
-#patient-modal-overlay { /* ★患者情報モーダルにも適用 */
+#patient-modal-overlay,
+#apply-careset-modal-overlay { /* ★ケアセット配置モーダルにも適用 */
     position: fixed;
     top: 0;
     left: 0;
@@ -506,7 +507,8 @@ body {
 }
 
 #task-modal,
-#nurse-modal { /* ★看護師設定モーダルにも適用 */
+#nurse-modal,
+#apply-careset-modal { /* ★ケアセット配置モーダルにも適用 */
     background-color: #fff;
     padding: 20px 30px;
     border-radius: 8px;
@@ -515,7 +517,8 @@ body {
 }
 
 #task-modal h2,
-#nurse-modal h2 { /* ★看護師設定モーダルにも適用 */
+#nurse-modal h2,
+#apply-careset-modal h2 { /* ★ケアセット配置モーダルにも適用 */
     margin-top: 0;
     text-align: center;
     font-size: 20px;
@@ -575,6 +578,22 @@ body {
 }
 .danger-btn:hover {
     background-color: #cc0000;
+}
+
+/* ★★★ ケアセット配置モーダルのスタイル ★★★ */
+#apply-careset-bed-list .ward-group {
+    margin-bottom: 15px;
+}
+#apply-careset-bed-list .ward-group h4 {
+    margin: 0 0 5px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ccc;
+}
+#apply-careset-bed-list .bed-radio-item {
+    display: inline-flex;
+    width: 25%; /* 4列表示 */
+    align-items: center;
+    margin-bottom: 5px;
 }
 /* ▲▲▲ モーダルウィンドウのスタイル ▲▲▲ */
 
@@ -742,7 +761,6 @@ body {
 }
 .care-set-header {
     flex-wrap: wrap; /* ★★★ 追加: 要素がはみ出したら折り返す ★★★ */
-    cursor: move; /* ★ドラッグ可能であることを示す */
 }
 .care-set-body {
     /* ★★★ 追加: 午前と午後のタイムラインを縦に並べる ★★★ */
