@@ -2112,25 +2112,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     /**
-     * @description サーバーからすべてのデータを読み込む (現在はlocalStorageを代用)
+     * @description サーバーからすべてのデータを読み込む (Google Apps Scriptを使用)
      */
     async function loadAllDataFromServer() {
-        console.log("データをサーバーから読み込み中... (現在はlocalStorageを使用)");
-        try {
-            // --- 将来のサーバー実装 (例) ---
-            // const response = await fetch('https://<あなたのサーバーアドレス>/api/data');
-            // if (!response.ok) throw new Error('サーバーからのデータ取得に失敗しました。');
-            // const data = await response.json();
-            // return data;
+        // ▼▼▼ ここにデプロイしたウェブアプリのURLを貼り付け ▼▼▼
+        const API_URL = 'https://script.google.com/macros/s/AKfycbywVGSG7hKyRadqLFs-LhE9EQIgJmycbnKzLXGmoW21b1Xvy9n1IGmiATqBFFeVZdPsqw/exec';
+        // ▲▲▲ ここにデプロイしたウェブアプリのURLを貼り付け ▲▲▲
 
-            // --- 現在のlocalStorage実装 ---
-            const dataJSON = localStorage.getItem('icu_simulator_data');
-            if (dataJSON) {
-                return JSON.parse(dataJSON);
+        console.log("データをGoogleスプレッドシートから読み込み中...");
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) {
+                throw new Error(`サーバーからのデータ取得に失敗しました。 Status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            // GASから返されるデータはJSON文字列の場合があるので、再度パースを試みる
+            if (typeof data === 'string') {
+                return JSON.parse(data);
+            }
+
+            // データが空、または正しくない形式の場合のフォールバック
+            if (data && (data.scenarios || data.careSets)) {
+                return data;
             } else {
-                // データがない場合は初期状態を返す
                 return { scenarios: {}, careSets: {} };
             }
+
         } catch (error) {
             console.error("データの読み込みに失敗しました:", error);
             alert("データの読み込みに失敗しました。");
@@ -2139,28 +2147,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * @description すべてのデータをサーバーに保存する (現在はlocalStorageを代用)
+     * @description すべてのデータをサーバーに保存する (Google Apps Scriptを使用)
      */
     async function saveAllDataToServer(scenariosToSave) { // ★★★ 修正: 保存するシナリオデータを引数で受け取る ★★★
-        console.log("データをサーバーに保存中... (現在はlocalStorageを使用)");
+        // ▼▼▼ ここにデプロイしたウェブアプリのURLを貼り付け ▼▼▼
+        const API_URL = 'https://script.google.com/macros/s/AKfycbywVGSG7hKyRadqLFs-LhE9EQIgJmycbnKzLXGmoW21b1Xvy9n1IGmiATqBFFeVZdPsqw/exec';
+        // ▲▲▲ ここにデプロイしたウェブアプリのURLを貼り付け ▲▲▲
+
+        console.log("データをGoogleスプレッドシートに保存中...");
         try {
             // ★★★ 修正: 引数で渡されたデータ、または現在の状態から取得したデータを使用 ★★★
             const scenarios = scenariosToSave || getSavedScenariosFromState();
             const dataToSave = {
                 scenarios: scenarios,
-                careSets: careSets
+                careSets: careSets,
+                // 保存時刻などを追加しても良い
+                lastUpdated: new Date().toISOString()
             };
 
-            // --- 将来のサーバー実装 (例) ---
-            // await fetch('https://<あなたのサーバーアドレス>/api/data', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify(dataToSave)
-            // });
-
-            // --- 現在のlocalStorage実装 ---
-            localStorage.setItem('icu_simulator_data', JSON.stringify(dataToSave));
-
+            await fetch(API_URL, {
+                method: 'POST',
+                mode: 'no-cors', // GASへのPOSTでは 'no-cors' が必要な場合がある
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataToSave)
+            });
+            console.log("データの保存リクエストを送信しました。");
         } catch (error) {
             console.error("データの保存に失敗しました:", error);
             alert("データの保存に失敗しました。");
@@ -2206,8 +2217,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 保存されているシナリオをlocalStorageから取得する
     function getSavedScenariosFromState() {
-        const scenariosJSON = localStorage.getItem('icu_simulator_data');
-        return scenariosJSON ? (JSON.parse(scenariosJSON).scenarios || {}) : {};
+        // この関数はシナリオ保存時に呼ばれるが、データソースはGASになるため、
+        // 実際にはアプリケーション起動時に読み込んだデータに依存する。
+        // しかし、直接GASに問い合わせると遅いため、現状のままとし、
+        // アプリケーションの状態から取得する方が効率的。
+        // この関数は `saveScenario` と `deleteScenario` から呼ばれるため、
+        // `initializeApp` で読み込んだ `scenarios` を直接参照する方が良いかもしれない。
+        return loadedScenarios || {}; // initializeAppで読み込んだグローバル変数を利用
     }
 
     // シナリオリストをドロップダウンに読み込む
@@ -2617,9 +2633,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初期描画
     // ----------------------------------------
     async function initializeApp() {
+        let loadedScenarios = {}; // ★シナリオデータを保持する変数
+
         // 1. サーバーからデータを読み込む
         const data = await loadAllDataFromServer();
-        careSets = data.careSets || {};
+        careSets = data.careSets || {}; // ★グローバル変数に代入
         const scenarios = data.scenarios || {};
 
         // 2. UIの初期化
