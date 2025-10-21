@@ -1,4 +1,5 @@
-アプリURL[https://nayutanhimarin.github.io/Nurse-simulator/]
+アプリURL(https://nayutanhimarin.github.io/Nurse-simulator/)
+
 
 
 [[2025.10.19]]
@@ -30,4 +31,7 @@
 　　科→概要→補足
 　　（心外→開胸術後→抜管後）
 - [x] ケアリストのサイドパネルとメインパネルのスクロールを別々に管理
-- [ ] 
+ - [x] ケアセット配置実装
+ - [x] 人数不足警告実装
+ - [ ] 人数が足りていないブロックの可視化不具合
+ - [ ] 全体セットの命名後セット名選択できない不具合

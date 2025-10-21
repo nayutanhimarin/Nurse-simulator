@@ -549,6 +549,11 @@ document.addEventListener('DOMContentLoaded', () => {
         newStartTime.setMinutes(roundedMinutes);
 
         // 2. 更新後のタスク情報で仮オブジェクトを作成
+        // ★★★ 修正: isUnderstaffedを再計算するために、元のタスク定義から必要人数を取得 ★★★
+        const originalTaskDefinition = careTasks[originalTask.category]?.items.find(item => item.name === originalTask.name);
+        const requiredStaff = originalTaskDefinition ? originalTaskDefinition.staff : 1;
+
+
         const updatedTask = { ...originalTask }; // コピーを作成
         updatedTask.startTime = newStartTime;
         updatedTask.endTime = new Date(newStartTime.getTime() + originalTask.duration * 60000);
@@ -589,6 +594,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 updatedTask.assignedBed = newBedName;
             }
         }
+
+        // ★★★ 追加: 担当者リストが変更された可能性があるので、人員不足フラグを再計算 ★★★
+        updatedTask.isUnderstaffed = requiredStaff > updatedTask.assignedNurses.length;
 
 
         // 4. 配置場所を探す（重複チェック）
@@ -908,13 +916,12 @@ document.addEventListener('DOMContentLoaded', () => {
         careSets[dept][summary][supplement] = { am: [], pm: [] };
 
         // プランナーのプルダウンを更新して新しいセットを選択状態にする
-        updateCareSetDeptOptions(); // ★科のプルダウンを更新
+        updateCareSetDeptOptions();
         careSetDeptSelect.value = dept;
         updateCareSetSummaryOptions();
         careSetSummarySelect.value = summary;
         updateCareSetSupplementOptions();
         careSetSupplementSelect.value = supplement;
-        renderCareSet();
 
         closeNewCareSetPopup();
         alert('新しいケアセットが作成されました。');
@@ -2134,10 +2141,11 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * @description すべてのデータをサーバーに保存する (現在はlocalStorageを代用)
      */
-    async function saveAllDataToServer() {
+    async function saveAllDataToServer(scenariosToSave) { // ★★★ 修正: 保存するシナリオデータを引数で受け取る ★★★
         console.log("データをサーバーに保存中... (現在はlocalStorageを使用)");
         try {
-            const scenarios = getSavedScenariosFromState(); // 現在のシナリオ状態を取得
+            // ★★★ 修正: 引数で渡されたデータ、または現在の状態から取得したデータを使用 ★★★
+            const scenarios = scenariosToSave || getSavedScenariosFromState();
             const dataToSave = {
                 scenarios: scenarios,
                 careSets: careSets
@@ -2229,12 +2237,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // ★新しい状態を保存
-        saveAllDataToServer();
+        // ★★★ 修正: 現在の状態をシナリオリストに追加してから保存する ★★★
+        const scenarios = getSavedScenariosFromState(); // 既存のシナリオを取得
+        scenarios[name] = getCurrentState(); // 新しいシナリオを追加
+        saveAllDataToServer(scenarios); // 更新されたシナリオリストを渡して保存
+
         scenarioNameInput.value = '';
-        loadScenarioList(getSavedScenariosFromState()); // ★リストを再読み込み
+        loadScenarioList(scenarios); // ★リストを再読み込み
         scenarioSelect.value = name; // 保存したシナリオを選択状態にする
-        alert(`シナリオ「${name}」を保存しました。`);
+        alert(`シナリオ「${name}」を保存しました。`); // ★★★ 修正: テンプレートリテラルに修正 ★★★
     }
 
     // 選択されたシナリオを読み込む
@@ -2261,7 +2272,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const scenarios = getSavedScenariosFromState();
             delete scenarios[name];
             // ★削除後に保存
-            saveAllDataToServer();
+            saveAllDataToServer(scenarios); // ★★★ 修正: 更新されたシナリオリストを渡して保存 ★★★
             loadScenarioList(scenarios);
         }
     }

@@ -862,3 +862,11 @@ body {
     box-sizing: border-box;
 }
 /* ▲▲▲ ケアセット新規作成ポップアップのスタイル ▲▲▲ */
+/* style.css (または該当するCSSファイル) に追記 */
+
+/* 人員不足のタスクブロックのスタイル */
+.task-block.understaffed {
+    background-color: #ffe0e0; /* 薄い赤色の背景 */
+    border: 2px solid #e74c3c; /* 濃い赤色の枠線 */
+    box-shadow: 0 0 5px rgba(231, 76, 60, 0.5); /* 影を追加してさらに目立たせる */
+}
