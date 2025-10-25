@@ -327,10 +327,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // ★★★ 修正: 看護師レベルに応じたマークを追加 ★★★
             const settings = nurseSettings[name] || {};
+            nameBlock.classList.add(`nurse-level-${settings.level || '新人'}`); // CSSでのスタイリング用クラス
             if (settings.level === '新人') {
                 nameBlock.textContent = `🔰 ${name}`;
             } else if (settings.level === 'リーダー') {
-                nameBlock.textContent = `👑 ${name}`;
+                nameBlock.textContent = `☆ ${name}`;
+            } else if (settings.level === 'フリージア') {
+                nameBlock.textContent = `🌸 ${name}`;
+            } else if (settings.level === '非リーダー') {
+                nameBlock.textContent = `〇 ${name}`;
             } else {
                 nameBlock.textContent = name;
             }
@@ -391,6 +396,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const rowGroup = document.createElement('div');
             rowGroup.classList.add('bed-row-group');
+            // ★★★ 修正: 描画時に重症度クラスを適用 ★★★
+            const patient = patientData[name] || {};
+            const severityClass = patient.isEmpty ? 'empty-bed' : `severity-${patient.severity || 1}`;
+            rowGroup.classList.add(severityClass);
+            rowGroup.id = `bed-group-${name}`; // ★★★ 追加: 更新用にIDを付与 ★★★
             
             const timelineRow = document.createElement('div');
             timelineRow.classList.add('timeline-row');
@@ -1382,8 +1392,11 @@ document.addEventListener('DOMContentLoaded', () => {
         nurseNameBlocks.forEach(block => {
             // data-nurse-name 属性を使って、マークの有無に関わらず対象の要素を特定する
             if (block.dataset.nurseName === editingNurseName) {
+                block.className = `nurse-name-block nurse-level-${nurseLevelSelect.value}`; // クラスを更新
                 if (nurseLevelSelect.value === '新人') block.textContent = `🔰 ${editingNurseName}`;
-                else if (nurseLevelSelect.value === 'リーダー') block.textContent = `👑 ${editingNurseName}`;
+                else if (nurseLevelSelect.value === 'リーダー') block.textContent = `☆ ${editingNurseName}`;
+                else if (nurseLevelSelect.value === 'フリージア') block.textContent = `🌸 ${editingNurseName}`;
+                else if (nurseLevelSelect.value === '非リーダー') block.textContent = `〇 ${editingNurseName}`;
                 else block.textContent = editingNurseName;
             }
         });
@@ -1592,12 +1605,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2. 上部ベッドマップの表示を更新
+        // 2. ベッドボードの行グループの枠線色を更新
+        const rowGroup = document.getElementById(`bed-group-${bedId}`);
+        if (rowGroup) {
+            // 既存の重症度クラスをすべて削除
+            rowGroup.className = 'bed-row-group'; // 基本クラスのみにリセット
+            const severityClass = data.isEmpty ? 'empty-bed' : `severity-${data.severity || 1}`;
+            rowGroup.classList.add(severityClass);
+        }
+
+        // 3. 上部ベッドマップの表示を更新
         const allBedBoxes = document.querySelectorAll('.bed-box');
         allBedBoxes.forEach(box => {
             if (box.textContent === bedId) {
-                box.style.backgroundColor = data.isEmpty ? '#e0e0e0' : '#fff';
-                // ここで重症度に応じて色を変えるなどの処理も追加できる
+                box.style.backgroundColor = data.isEmpty ? '#e0e0e0' : '#fff'; // ★一旦リセット（この後ヒートマップで再計算される）
             }
         });
     }
@@ -1654,6 +1675,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         updatePatientDisplay(editingBedId);
+        // ★★★ 修正: 患者情報更新後にヒートマップを即時更新する ★★★
+        updateHeatmap();
         saveAllDataToServer(); // ★サーバーへの保存関数を呼び出す
         closePatientModal();
     });
@@ -1968,7 +1991,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskEl.style.left = `${left}px`;
         taskEl.style.width = `${width}px`;
         taskEl.textContent = task.name;
-        taskEl.title = task.name; // ★ホバー時にフルネームをツールチップで表示
+        taskEl.title = `${task.name} (${task.assignedBed}番ベッド)`; // ★ホバー時にタスク名とベッド名を表示
 
         // ★★★ 修正: 人員不足の場合に警告スタイルを適用 ★★★
         if (task.isUnderstaffed) {

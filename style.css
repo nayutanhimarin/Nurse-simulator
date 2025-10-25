@@ -233,6 +233,20 @@ body {
     box-sizing: border-box;
     border-bottom: 1px solid #ccc;
 }
+
+/* ▼▼▼ ベッドボードの重症度別スタイル ▼▼▼ */
+.bed-row-group {
+    border-left: 5px solid transparent; /* 枠線用のスペースを確保 */
+    transition: border-color 0.3s ease; /* 色の変化を滑らかに */
+}
+.bed-row-group.severity-1 { border-left-color: #4caf50; } /* 緑 */
+.bed-row-group.severity-2 { border-left-color: #cddc39; } /* ライム */
+.bed-row-group.severity-3 { border-left-color: #ffc107; } /* 黄色 */
+.bed-row-group.severity-4 { border-left-color: #ff9800; } /* オレンジ */
+.bed-row-group.severity-5 { border-left-color: #f44336; } /* 赤 */
+.bed-row-group.empty-bed { border-left-color: #e0e0e0; } /* 空床は灰色 */
+/* ▲▲▲ ベッドボードの重症度別スタイル ▲▲▲ */
+
 /* ▲▲▲ ここまで追加 ▲▲▲ */
 
 /* ★タイムラインの1行 (5分グリッドの親) */
