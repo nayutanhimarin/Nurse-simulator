@@ -89,10 +89,6 @@ body {
     flex-grow: 0; /* ★★★ 修正: コンテナが不必要に伸びないようにする ★★★ */
 }
 
-/* タイムライン全体 (★横スクロールをtimeline-areaに移管) */
-.timeline-container {
-}
-
 /* 時間ヘッダー (8時... と 0 10 20...) */
 .timeline-header {
     border-bottom: 2px solid #aaa;
@@ -199,8 +195,6 @@ body {
     justify-content: center; /* ★中央揃えのために追加 */
     align-items: center; /* ★中央揃えのために追加 */
 }
-.minute-row,
-.care-set-minute-row { } /* ★ケアセットプランナーにも適用 */
 .minute-block {
     width: var(--col-width-10min); 
     text-align: center; 
@@ -214,11 +208,6 @@ body {
     border-right: 1px solid #bbb;
 }
 
-
-/* ★★★ タイムライン本体 ★★★ */
-.timeline-body {
-    /* JSで中身が追加されます */
-}
 
 /* ★看護師1人分 (3行) のグループ */
 .nurse-row-group {
@@ -752,9 +741,6 @@ body {
 .care-set-selectors {
     display: flex;
     gap: 5px;
-}
-.care-set-selectors select {
-    /* ★セレクタが3つになっても均等に広がるように */
 }
 
 .care-set-actions {

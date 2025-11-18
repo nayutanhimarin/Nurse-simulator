@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { name: '見守り', staff: 1, time: 2 }, // 10分
                 { name: '検温', staff: 1, time: 1 }, // 5分
                 { name: '口腔ケア(挿管)', staff: 1, time: 2 }, // 10分
+                { name: '口腔ケア(非挿管)', staff: 1, time: 2 }, // 10分 ★★★ 追加 ★★★
                 { name: '体位交換(挿管)', staff: 2, time: 1 }, // 5分
                 { name: '体位交換(非挿管)', staff: 1, time: 2 }, // 10分
                 { name: 'トイレ介助', staff: 1, time: 2 }, // 10分 
@@ -168,12 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
             items: [
                 { name: '採血/血ガス', staff: 1, time: 1 }, // 5分
                 { name: '培養', staff: 1, time: 2 }, // 10分
+                { name: 'SAT/SBT', staff: 1, time: 3 }, // 15分 ★★★ 追加 ★★★
                 { name: 'CV/PICC', staff: 1, time: 6 }, // 30分
                 { name: '挿管', staff: 2, time: 4 }, // 20分
                 { name: '抜管', staff: 2, time: 4 }, // 20分
                 { name: 'D抜去', staff: 1, time: 4 }, // 20分
                 { name: 'BF', staff: 1, time: 4 }, // 20分
                 { name: 'RRT', staff: 1, time: 6 }, // 30分
+                { name: 'CT2', staff: 2, time: 4 }, // 20分 ★★★ 追加 ★★★
                 { name: '入室', staff: 3, time: 6 }, // 30分
             ]
         },
@@ -217,6 +220,258 @@ document.addEventListener('DOMContentLoaded', () => {
     // ★★★ ケアセットの定義を追加 ★★★
     // ★★★ データ構造を3階層に変更 (科 -> 概要 -> 補足) ★★★
     let careSets = {
+        "呼外": {
+            "VATS": {
+                "1病日目": {
+                    am: [
+                        { name: "清拭1", startTime: "09:30" }, // ★★★ 修正: 転棟1 -> 転棟2 に変更 (元データに合わせて)
+                        { name: "リハビリ1", startTime: "10:00" },
+                        { name: "転棟2", startTime: "10:30" }
+                    ],
+                    pm: []
+                }
+            }
+        },
+        "心外": {
+            "CABG、弁置換、弓部置換": { // ★★★ 修正: 概要名を統一 ★★★
+                "1病日目": {
+                    am: [
+                        { name: "SAT/SBT", startTime: "10:30" },
+                        { name: "清拭2", startTime: "10:00" },
+                        { name: "体位交換(挿管)", startTime: "10:15" },
+                        { name: "口腔ケア(挿管)", startTime: "10:20" },
+                        { name: "体位交換(挿管)", startTime: "12:00" }
+                    ],
+                    pm: [
+                        { name: "体位交換(挿管)", startTime: "14:00" },
+                        { name: "口腔ケア(挿管)", startTime: "14:05" },
+                        { name: "体位交換(挿管)", startTime: "16:00" }
+                    ]
+                },
+                "2病日目": { // ★★★ 以下、新規追加 ★★★
+                    am: [
+                        { name: "抜管", startTime: "10:00" },
+                        { name: "清拭1", startTime: "11:00" }
+                    ],
+                    pm: [
+                        { name: "口腔ケア(非挿管)", startTime: "13:00" },
+                        { name: "リハビリ1", startTime: "15:00" }
+                    ]
+                },
+                "抜管後": {
+                    am: [
+                        { name: "清拭1", startTime: "11:00" },
+                        { name: "食事介助", startTime: "12:00" }
+                    ],
+                    pm: [
+                        { name: "口腔ケア(非挿管)", startTime: "13:00" },
+                        { name: "リハビリ1", startTime: "15:00" }
+                    ]
+                }
+            },
+            "EVAR/TEVAR": {
+                "1病日目": {
+                    am: [
+                        { name: "清拭1", startTime: "09:30" },
+                        { name: "転棟1", startTime: "10:30" }
+                    ],
+                    pm: []
+                }
+            },
+            "B解離": {
+                "Stage1": {
+                    am: [
+                        { name: "清拭2", startTime: "10:00" },
+                        { name: "体位交換(非挿管)", startTime: "10:15" },
+                        { name: "体位交換(非挿管)", startTime: "12:00" }
+                    ],
+                    pm: [
+                        { name: "口腔ケア(非挿管)", startTime: "13:00" },
+                        { name: "体位交換(非挿管)", startTime: "14:00" },
+                        { name: "体位交換(非挿管)", startTime: "16:00" }
+                    ]
+                },
+                "Stage2": {
+                    am: [
+                        { name: "清拭1", startTime: "10:00" },
+                        { name: "体位交換(非挿管)", startTime: "10:15" },
+                        { name: "体位交換(非挿管)", startTime: "12:00" }
+                    ],
+                    pm: [
+                        { name: "口腔ケア(非挿管)", startTime: "13:00" },
+                        { name: "体位交換(非挿管)", startTime: "14:00" },
+                        { name: "体位交換(非挿管)", startTime: "16:00" }
+                    ]
+                }
+            }
+        },
+        "肝胆外": {
+            "肝切": {
+                "1病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            },
+            "PD": {
+                "1/2病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "リハビリ1", startTime: "11:00" } ],
+                    pm: [ { name: "口腔ケア(非挿管)", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" } ]
+                },
+                "3病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            }
+        },
+        "肝移植": { // ★★★ 以下、新規追加 ★★★
+            "1病日目": {
+                am: [
+                    { name: "点滴セット", startTime: "10:00" },
+                    { name: "清拭2", startTime: "10:15" },
+                    { name: "体位交換(挿管)", startTime: "10:30" },
+                    { name: "体位交換(挿管)", startTime: "12:00" }
+                ],
+                pm: [
+                    { name: "点滴セット", startTime: "14:00" },
+                    { name: "体位交換(挿管)", startTime: "14:15" },
+                    { name: "口腔ケア(挿管)", startTime: "14:25" },
+                    { name: "体位交換(挿管)", startTime: "16:00" }
+                ]
+            },
+            "2病日目": {
+                am: [
+                    { name: "点滴セット", startTime: "10:00" },
+                    { name: "体位交換(非挿管)", startTime: "10:15" },
+                    { name: "SAT/SBT", startTime: "10:30" },
+                    { name: "抜管", startTime: "11:00" }
+                ],
+                pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "清拭1", startTime: "14:15" }, { name: "リハビリ1", startTime: "15:00" } ]
+            },
+            "抜管後": {
+                am: [ { name: "点滴セット", startTime: "10:00" }, { name: "清拭1", startTime: "11:00" }, { name: "食事介助", startTime: "12:00" } ],
+                pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" } ]
+            }
+        },
+        "消外": {
+            "食道切除": {
+                "1/2病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "リハビリ1", startTime: "11:00" }, { name: "口腔ケア(非挿管)", startTime: "12:00" } ],
+                    pm: [ { name: "リハビリ1", startTime: "14:00" } ]
+                },
+                "3病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            }
+        },
+        "耳鼻科": {
+            "咽頭切除": {
+                "1病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "吸痰", startTime: "11:00" }, { name: "吸痰", startTime: "12:00" } ],
+                    pm: [ { name: "吸痰", startTime: "13:00" }, { name: "吸痰", startTime: "14:00" }, { name: "口腔ケア(非挿管)", startTime: "14:05" } ]
+                },
+                "2病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            }
+        },
+        "整形": {
+            "TES": {
+                "1病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            }
+        },
+        "救急": {
+            "意識障害": {
+                "1病日目～": {
+                    am: [ { name: "体位交換(挿管)", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" } ],
+                    pm: [ { name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" } ]
+                }
+            }
+        },
+        "脳外": {
+            "脳腫瘍": {
+                "1病日目": {
+                    am: [ { name: "SAT/SBT", startTime: "07:00" }, { name: "抜管", startTime: "08:00" }, { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            },
+            "SAH": {
+                "1病日目": {
+                    am: [ { name: "体位交換(挿管)", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" } ],
+                    pm: [ { name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" } ]
+                },
+                "2病日目": {
+                    am: [ { name: "CT2", startTime: "10:00" }, { name: "体位交換(挿管)", startTime: "10:30" }, { name: "清拭2", startTime: "10:45" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" } ],
+                    pm: [ { name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" } ]
+                }
+            }
+        },
+        "産婦人科": {
+            "子宮摘出": {
+                "1病日目": {
+                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    pm: []
+                }
+            }
+        }
+    };
+
+    // ★★★ デフォルトシナリオの定義を追加 ★★★
+    const defaultScenarios = {
+        "【サンプル】通常日勤パターン": {
+            northNurseCount: "6",
+            southNurseCount: "7",
+            patientData: {
+                "1": { isEmpty: false, dept: "心外", severity: "5", summary: "CABG、弁置換", vent: true, purification: false, assist: false, delirium: false, mobility: "床上" },
+                "2": { isEmpty: false, dept: "脳外", severity: "5", summary: "SAH", vent: true, purification: true, assist: false, delirium: true, mobility: "床上" },
+                "3": { isEmpty: true },
+                "A": { isEmpty: false, dept: "呼外", severity: "3", summary: "VATS", vent: false, purification: false, assist: false, delirium: false, mobility: "端坐位" },
+                "B": { isEmpty: true }
+            },
+            nurseSettings: {
+                "リーダー北": { level: "リーダー", assignedBeds: ["1", "2"] },
+                "看護師1": { level: "非リーダー", assignedBeds: ["3"] },
+                "リーダー南": { level: "リーダー", assignedBeds: ["A", "B"] },
+            },
+            placedTasks: [
+                // ベッド1に「心外 > CABG、弁置換 > 1病日目」を適用した結果
+                {
+                    id: "scenario_task_1", name: "清拭2", category: "care",
+                    startTime: "1970-01-01T10:00:00.000Z", endTime: "1970-01-01T10:15:00.000Z", duration: 15,
+                    assignedNurses: ["リーダー北", "看護師1"], assignedBed: "1",
+                    displayRows: { "リーダー北": 1, "看護師1": 1 }, isUnderstaffed: false
+                },
+                {
+                    id: "scenario_task_2", name: "体位交換(挿管)", category: "care",
+                    startTime: "1970-01-01T10:15:00.000Z", endTime: "1970-01-01T10:20:00.000Z", duration: 5,
+                    assignedNurses: ["リーダー北", "看護師1"], assignedBed: "1",
+                    displayRows: { "リーダー北": 1, "看護師1": 1 }, isUnderstaffed: false
+                },
+                {
+                    id: "scenario_task_3", name: "口腔ケア(挿管)", category: "care",
+                    startTime: "1970-01-01T10:20:00.000Z", endTime: "1970-01-01T10:30:00.000Z", duration: 10,
+                    assignedNurses: ["リーダー北"], assignedBed: "1",
+                    displayRows: { "リーダー北": 1 }, isUnderstaffed: false
+                },
+                // ベッドAに「呼外 > VATS > 1病日目」を適用した結果
+                {
+                    id: "scenario_task_4", name: "清拭1", category: "care",
+                    startTime: "1970-01-01T09:30:00.000Z", endTime: "1970-01-01T09:50:00.000Z", duration: 20,
+                    assignedNurses: ["リーダー南"], assignedBed: "A",
+                    displayRows: { "リーダー南": 1 }, isUnderstaffed: false
+                }
+            ]
+        },
+        "【サンプル】緊急入室パターン": {
+            // 2つ目のシナリオデータをここに追加
+        },
+        "【サンプル】南病棟多忙パターン": {
+            // 3つ目のシナリオデータをここに追加
+        }
     };
 
     // ----------------------------------------
@@ -2347,12 +2602,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 3. 現在アクティブなシフト（午前/午後）を判定し、対応するタスクリストを取得
-        const isAm = currentShiftStartHour === 8;
-        const taskSet = isAm ? careSet.am : careSet.pm;
+        // ★★★ 修正: 午前と午後の両方のタスクを結合して取得する ★★★
+        const taskSet = [...(careSet.am || []), ...(careSet.pm || [])];
 
         if (!taskSet || taskSet.length === 0) {
-            alert(`選択されたケアセットには、${isAm ? '午前' : '午後'}のタスクが登録されていません。`);
+            alert(`選択されたケアセットにはタスクが登録されていません。`);
             return;
         }
 
@@ -2626,10 +2880,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initializeApp() {
         let loadedScenarios = {}; // ★シナリオデータを保持する変数
 
-        // 1. サーバーからデータを読み込む
+        // 1. localStorageからデータを読み込む
         const data = await loadAllDataFromServer();
-        careSets = data.careSets || {}; // ★グローバル変数に代入
-        const scenarios = data.scenarios || {};
+        let scenarios = data.scenarios || {};
+
+        // ★★★ 修正: localStorageのシナリオが空の場合、デフォルトシナリオを読み込む ★★★
+        if (!scenarios || Object.keys(scenarios).length === 0) {
+            scenarios = defaultScenarios;
+        }
+
+        // ★★★ 修正: localStorageのケアセットが空の場合、デフォルトケアセットを使う ★★★
+        // Object.keys(...).length > 0 で、空のオブジェクトでないことを確認
+        if (data.careSets && Object.keys(data.careSets).length > 0) {
+            careSets = data.careSets; // localStorageのデータで上書き
+        } // なければ、コードで定義済みのcareSetsがそのまま使われる
 
         // 2. UIの初期化
         initializeBedDisplays();
