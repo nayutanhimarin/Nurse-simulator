@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         },
-        "肝胆外": {
+        "肝外": {
             "肝切": {
                 "1病日目": {
                     am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
@@ -321,37 +321,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
                     pm: []
                 }
-            }
-        },
-        "肝移植": { // ★★★ 以下、新規追加 ★★★
-            "1病日目": {
-                am: [
-                    { name: "点滴セット", startTime: "10:00" },
-                    { name: "清拭2", startTime: "10:15" },
-                    { name: "体位交換(挿管)", startTime: "10:30" },
-                    { name: "体位交換(挿管)", startTime: "12:00" }
-                ],
-                pm: [
-                    { name: "点滴セット", startTime: "14:00" },
-                    { name: "体位交換(挿管)", startTime: "14:15" },
-                    { name: "口腔ケア(挿管)", startTime: "14:25" },
-                    { name: "体位交換(挿管)", startTime: "16:00" }
-                ]
             },
-            "2病日目": {
-                am: [
-                    { name: "点滴セット", startTime: "10:00" },
-                    { name: "体位交換(非挿管)", startTime: "10:15" },
-                    { name: "SAT/SBT", startTime: "10:30" },
-                    { name: "抜管", startTime: "11:00" }
-                ],
-                pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "清拭1", startTime: "14:15" }, { name: "リハビリ1", startTime: "15:00" } ]
+            "肝移植": { 
+                "1病日目": {
+                    am: [{ name: "点滴セット", startTime: "10:00" },{ name: "清拭2", startTime: "10:15" },{ name: "体位交換(挿管)", startTime: "10:30" },{ name: "体位交換(挿管)", startTime: "12:00" }],
+                    pm: [{ name: "点滴セット", startTime: "14:00" },{ name: "体位交換(挿管)", startTime: "14:15" },{ name: "口腔ケア(挿管)", startTime: "14:25" },{ name: "体位交換(挿管)", startTime: "16:00" }]
+                },
+                "2病日目": {
+                    am: [{ name: "点滴セット", startTime: "10:00" },{ name: "体位交換(非挿管)", startTime: "10:15" },{ name: "SAT/SBT", startTime: "10:30" },{ name: "抜管", startTime: "11:00" }],
+                    pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "清拭1", startTime: "14:15" }, { name: "リハビリ1", startTime: "15:00" } ]
+                },
+                "抜管後": {
+                    am: [ { name: "点滴セット", startTime: "10:00" }, { name: "清拭1", startTime: "11:00" }, { name: "食事介助", startTime: "12:00" } ],
+                    pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" } ]
+                }
             },
-            "抜管後": {
-                am: [ { name: "点滴セット", startTime: "10:00" }, { name: "清拭1", startTime: "11:00" }, { name: "食事介助", startTime: "12:00" } ],
-                pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" } ]
-            }
-        },
+        },    
         "消外": {
             "食道切除": {
                 "1/2病日目": {
