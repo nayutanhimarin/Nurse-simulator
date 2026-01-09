@@ -1,6 +1,6 @@
 // DOMが読み込まれたら実行
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     // ----------------------------------------
     // 要素の取得
     // ----------------------------------------
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const namesHeaderSpacer = document.querySelector('.names-header-spacer');
     const patientSummaryArea = document.querySelector('.patient-summary-area');
     const patientSummaryHeader = document.querySelector('.patient-summary-header');
-    
+
     const btnAm = document.getElementById('btn-am');
     const btnPm = document.getElementById('btn-pm');
     const btnNorth = document.getElementById('btn-north');
@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scenarioSelect = document.getElementById('scenario-select');
     const scenarioNameInput = document.getElementById('scenario-name');
     const btnSaveScenario = document.getElementById('btn-save-scenario');
+    const btnLoadScenario = document.getElementById('btn-load-scenario');
     const btnDeleteScenario = document.getElementById('btn-delete-scenario');
 
 
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const blocksPerHour_Header = 6;
     const blocksPerHour_Body = 12;
     const minutes = ['0', '10', '20', '30', '40', '50'];
-    
+
     // ★ベッドの定義を追加
     const beds = {
         north: { count: 10, type: 'number' },
@@ -214,6 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
         'その他': [],
         '小児/小児外科': ['<1歳', '1-3歳', '4-6歳', '7歳以上'],
         '小児心外': ['<1歳', '1-3歳', '4-6歳', '7歳以上'],
+        '整形': [],
+        '呼内': [],
+        '腎内': [],
+        '精神科': [],
     };
     const OTHER_SUMMARY_OPTION = 'その他（自由記述）';
 
@@ -308,43 +313,43 @@ document.addEventListener('DOMContentLoaded', () => {
         "肝外": {
             "肝切": {
                 "1病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             },
             "PD": {
                 "1/2病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "リハビリ1", startTime: "11:00" } ],
-                    pm: [ { name: "口腔ケア(非挿管)", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" } ]
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "リハビリ1", startTime: "11:00" }],
+                    pm: [{ name: "口腔ケア(非挿管)", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" }]
                 },
                 "3病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             },
-            "肝移植": { 
+            "肝移植": {
                 "1病日目": {
-                    am: [{ name: "点滴セット", startTime: "10:00" },{ name: "清拭2", startTime: "10:15" },{ name: "体位交換(挿管)", startTime: "10:30" },{ name: "体位交換(挿管)", startTime: "12:00" }],
-                    pm: [{ name: "点滴セット", startTime: "14:00" },{ name: "体位交換(挿管)", startTime: "14:15" },{ name: "口腔ケア(挿管)", startTime: "14:25" },{ name: "体位交換(挿管)", startTime: "16:00" }]
+                    am: [{ name: "点滴セット", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "体位交換(挿管)", startTime: "10:30" }, { name: "体位交換(挿管)", startTime: "12:00" }],
+                    pm: [{ name: "点滴セット", startTime: "14:00" }, { name: "体位交換(挿管)", startTime: "14:15" }, { name: "口腔ケア(挿管)", startTime: "14:25" }, { name: "体位交換(挿管)", startTime: "16:00" }]
                 },
                 "2病日目": {
-                    am: [{ name: "点滴セット", startTime: "10:00" },{ name: "体位交換(非挿管)", startTime: "10:15" },{ name: "SAT/SBT", startTime: "10:30" },{ name: "抜管", startTime: "11:00" }],
-                    pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "清拭1", startTime: "14:15" }, { name: "リハビリ1", startTime: "15:00" } ]
+                    am: [{ name: "点滴セット", startTime: "10:00" }, { name: "体位交換(非挿管)", startTime: "10:15" }, { name: "SAT/SBT", startTime: "10:30" }, { name: "抜管", startTime: "11:00" }],
+                    pm: [{ name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "清拭1", startTime: "14:15" }, { name: "リハビリ1", startTime: "15:00" }]
                 },
                 "抜管後": {
-                    am: [ { name: "点滴セット", startTime: "10:00" }, { name: "清拭1", startTime: "11:00" }, { name: "食事介助", startTime: "12:00" } ],
-                    pm: [ { name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" } ]
+                    am: [{ name: "点滴セット", startTime: "10:00" }, { name: "清拭1", startTime: "11:00" }, { name: "食事介助", startTime: "12:00" }],
+                    pm: [{ name: "口腔ケア(非挿管)", startTime: "13:00" }, { name: "点滴セット", startTime: "14:00" }, { name: "リハビリ1", startTime: "15:00" }]
                 }
             },
-        },    
+        },
         "消外": {
             "食道切除": {
                 "1/2病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "リハビリ1", startTime: "11:00" }, { name: "口腔ケア(非挿管)", startTime: "12:00" } ],
-                    pm: [ { name: "リハビリ1", startTime: "14:00" } ]
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "リハビリ1", startTime: "11:00" }, { name: "口腔ケア(非挿管)", startTime: "12:00" }],
+                    pm: [{ name: "リハビリ1", startTime: "14:00" }]
                 },
                 "3病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             }
@@ -352,19 +357,19 @@ document.addEventListener('DOMContentLoaded', () => {
         "耳鼻科": {
             "咽頭切除": {
                 "1病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "吸痰", startTime: "11:00" }, { name: "吸痰", startTime: "12:00" } ],
-                    pm: [ { name: "吸痰", startTime: "13:00" }, { name: "吸痰", startTime: "14:00" }, { name: "口腔ケア(非挿管)", startTime: "14:05" } ]
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "吸痰", startTime: "11:00" }, { name: "吸痰", startTime: "12:00" }],
+                    pm: [{ name: "吸痰", startTime: "13:00" }, { name: "吸痰", startTime: "14:00" }, { name: "口腔ケア(非挿管)", startTime: "14:05" }]
                 },
                 "2病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             }
         },
-        "整形": {
+        "脊外": {
             "TES": {
                 "1病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             }
@@ -372,33 +377,33 @@ document.addEventListener('DOMContentLoaded', () => {
         "救急": {
             "意識障害": {
                 "1病日目～": {
-                    am: [ { name: "体位交換(挿管)", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" } ],
-                    pm: [ { name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" } ]
+                    am: [{ name: "体位交換(挿管)", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" }],
+                    pm: [{ name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" }]
                 }
             }
         },
         "脳外": {
             "脳腫瘍": {
                 "1病日目": {
-                    am: [ { name: "SAT/SBT", startTime: "07:00" }, { name: "抜管", startTime: "08:00" }, { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "SAT/SBT", startTime: "07:00" }, { name: "抜管", startTime: "08:00" }, { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             },
             "SAH": {
                 "1病日目": {
-                    am: [ { name: "体位交換(挿管)", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" } ],
-                    pm: [ { name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" } ]
+                    am: [{ name: "体位交換(挿管)", startTime: "10:00" }, { name: "清拭2", startTime: "10:15" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" }],
+                    pm: [{ name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" }]
                 },
                 "2病日目": {
-                    am: [ { name: "CT2", startTime: "10:00" }, { name: "体位交換(挿管)", startTime: "10:30" }, { name: "清拭2", startTime: "10:45" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" } ],
-                    pm: [ { name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" } ]
+                    am: [{ name: "CT2", startTime: "10:00" }, { name: "体位交換(挿管)", startTime: "10:30" }, { name: "清拭2", startTime: "10:45" }, { name: "口腔ケア(挿管)", startTime: "11:00" }, { name: "体位交換(挿管)", startTime: "12:00" }],
+                    pm: [{ name: "体位交換(挿管)", startTime: "14:00" }, { name: "口腔ケア(挿管)", startTime: "15:00" }, { name: "体位交換(挿管)", startTime: "16:00" }]
                 }
             }
         },
         "産婦人科": {
             "子宮摘出": {
                 "1病日目": {
-                    am: [ { name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" } ],
+                    am: [{ name: "清拭1", startTime: "10:00" }, { name: "転棟1", startTime: "11:00" }],
                     pm: []
                 }
             }
@@ -407,57 +412,200 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ★★★ デフォルトシナリオの定義を追加 ★★★
     const defaultScenarios = {
-        "【サンプル】通常日勤パターン": {
+        "シナリオ1": {
             northNurseCount: "6",
-            southNurseCount: "7",
+            southNurseCount: "6", // リーダー南 + N6-N10 = 6人
             patientData: {
-                "1": { isEmpty: false, dept: "心外", severity: "5", summary: "CABG、弁置換", vent: true, purification: false, assist: false, delirium: false, mobility: "床上" },
-                "2": { isEmpty: false, dept: "脳外", severity: "5", summary: "SAH", vent: true, purification: true, assist: false, delirium: true, mobility: "床上" },
-                "3": { isEmpty: true },
-                "A": { isEmpty: false, dept: "呼外", severity: "3", summary: "VATS", vent: false, purification: false, assist: false, delirium: false, mobility: "端坐位" },
-                "B": { isEmpty: true }
+                "A": { isEmpty: false, dept: "脊外", severity: "3", summary: "後方固定術", vent: false, purification: false, assist: false, delirium: false, mobility: "床上", dischargePlan: false },
+                "B": { isEmpty: false, dept: "心外", severity: "3", summary: "CABG", vent: false, purification: false, assist: false, delirium: false, mobility: "端坐位", dischargePlan: false },
+                "C": { isEmpty: false, dept: "呼外", severity: "1", summary: "VATS", vent: false, purification: false, assist: false, delirium: false, mobility: "歩行", dischargePlan: false },
+                "D": { isEmpty: false, dept: "心外", severity: "3", summary: "A解離術後", vent: false, purification: false, assist: false, delirium: false, mobility: "床上", dischargePlan: false },
+                "E": { isEmpty: false, dept: "心外", severity: "1", summary: "EVAR", vent: false, purification: false, assist: false, delirium: false, mobility: "歩行", dischargePlan: false },
+                "F": { isEmpty: false, dept: "消外", severity: "5", summary: "腹膜炎", vent: true, purification: false, assist: false, delirium: true, mobility: "床上", dischargePlan: false },
+                "G": { isEmpty: false, dept: "消内", severity: "5", summary: "食道動脈瘤", vent: true, purification: true, assist: false, delirium: true, mobility: "床上", dischargePlan: false },
+                "H": { isEmpty: true },
+                "I": { isEmpty: true },
+                "J": { isEmpty: false, dept: "心外", severity: "1", summary: "EVAR", vent: false, purification: false, assist: false, delirium: true, mobility: "歩行", dischargePlan: false },
+                "K": { isEmpty: true },
+                "L": { isEmpty: false, dept: "呼内", severity: "5", summary: "COVIDｰ19", vent: true, purification: true, assist: false, delirium: true, mobility: "床上", dischargePlan: false },
+                "1": { isEmpty: false, dept: "心外", severity: "3", summary: "A解離降圧", vent: false, purification: false, assist: false, delirium: false, mobility: "床上", dischargePlan: false },
+                "2": { isEmpty: false, dept: "腎内", severity: "3", summary: "代謝性アシドーシス", vent: false, purification: false, assist: false, delirium: false, mobility: "床上", dischargePlan: false },
+                "3": { isEmpty: false, dept: "呼外", severity: "1", summary: "VATS", vent: false, purification: false, assist: false, delirium: false, mobility: "歩行", dischargePlan: false },
+                "4": { isEmpty: false, dept: "心外", severity: "3", summary: "B解離降圧", vent: false, purification: false, assist: false, delirium: false, mobility: "端坐位", dischargePlan: false },
+                "5": { isEmpty: false, dept: "肝外", severity: "3", summary: "肝切", vent: false, purification: false, assist: false, delirium: false, mobility: "立位", dischargePlan: false },
+                "6": { isEmpty: false, dept: "精神科", severity: "5", summary: "悪性症候群", vent: true, purification: false, assist: false, delirium: false, mobility: "床上", dischargePlan: false },
+                "7": { isEmpty: false, dept: "呼外", severity: "1", summary: "VATS", vent: false, purification: false, assist: false, delirium: false, mobility: "歩行", dischargePlan: false },
+                "8": { isEmpty: false, dept: "心外", severity: "5", summary: "A解離術後", vent: true, purification: false, assist: false, delirium: false, mobility: "床上", dischargePlan: false },
+                "9": { isEmpty: false, dept: "小児/小児外科", severity: "5", summary: "肝芽腫", vent: true, purification: false, assist: false, delirium: true, mobility: "床上", dischargePlan: false },
+                "10": { isEmpty: true }
             },
             nurseSettings: {
-                "リーダー北": { level: "リーダー", assignedBeds: ["1", "2"] },
-                "看護師1": { level: "非リーダー", assignedBeds: ["3"] },
-                "リーダー南": { level: "リーダー", assignedBeds: ["A", "B"] },
+                "リーダー北": { level: "リーダー", assignedBeds: [] },
+                "看護師1": { level: "非リーダー", assignedBeds: ["A", "B"] },
+                "看護師2": { level: "新人", assignedBeds: ["C", "D"] },
+                "看護師3": { level: "リーダー", assignedBeds: ["E", "F"] },
+                "看護師4": { level: "リーダー", assignedBeds: ["G"] },
+                "看護師5": { level: "非リーダー", assignedBeds: ["J", "L"] },
+                "看護師6": { level: "非リーダー", assignedBeds: ["1", "2"] },
+                "看護師7": { level: "非リーダー", assignedBeds: ["3", "4"] },
+                "看護師8": { level: "非リーダー", assignedBeds: ["5", "6"] },
+                "看護師9": { level: "リーダー", assignedBeds: ["7", "8"] },
+                "看護師10": { level: "リーダー", assignedBeds: ["9"] },
+                "リーダー南": { level: "リーダー", assignedBeds: [] }
             },
-            placedTasks: [
-                // ベッド1に「心外 > CABG、弁置換 > 1病日目」を適用した結果
-                {
-                    id: "scenario_task_1", name: "清拭2", category: "care",
-                    startTime: "1970-01-01T10:00:00.000Z", endTime: "1970-01-01T10:15:00.000Z", duration: 15,
-                    assignedNurses: ["リーダー北", "看護師1"], assignedBed: "1",
-                    displayRows: { "リーダー北": 1, "看護師1": 1 }, isUnderstaffed: false
-                },
-                {
-                    id: "scenario_task_2", name: "体位交換(挿管)", category: "care",
-                    startTime: "1970-01-01T10:15:00.000Z", endTime: "1970-01-01T10:20:00.000Z", duration: 5,
-                    assignedNurses: ["リーダー北", "看護師1"], assignedBed: "1",
-                    displayRows: { "リーダー北": 1, "看護師1": 1 }, isUnderstaffed: false
-                },
-                {
-                    id: "scenario_task_3", name: "口腔ケア(挿管)", category: "care",
-                    startTime: "1970-01-01T10:20:00.000Z", endTime: "1970-01-01T10:30:00.000Z", duration: 10,
-                    assignedNurses: ["リーダー北"], assignedBed: "1",
-                    displayRows: { "リーダー北": 1 }, isUnderstaffed: false
-                },
-                // ベッドAに「呼外 > VATS > 1病日目」を適用した結果
-                {
-                    id: "scenario_task_4", name: "清拭1", category: "care",
-                    startTime: "1970-01-01T09:30:00.000Z", endTime: "1970-01-01T09:50:00.000Z", duration: 20,
-                    assignedNurses: ["リーダー南"], assignedBed: "A",
-                    displayRows: { "リーダー南": 1 }, isUnderstaffed: false
-                }
-            ]
+            placedTasks: [] // 後で関数で生成
         },
-        "【サンプル】緊急入室パターン": {
-            // 2つ目のシナリオデータをここに追加
-        },
-        "【サンプル】南病棟多忙パターン": {
-            // 3つ目のシナリオデータをここに追加
-        }
+        "【サンプル】緊急入室パターン": {},
+        "【サンプル】南病棟多忙パターン": {}
     };
+
+    // ----------------------------------------
+    // ★関数: シナリオ1のタスクを生成する
+    // ----------------------------------------
+    function generateScenario1Tasks() {
+        const tasks = [];
+        const scenario = defaultScenarios["シナリオ1"];
+
+        // ヘルパー：タスクを追加する
+        function addTask(bedId, taskName, hour, minute) {
+            // 担当看護師を探す
+            let assignedNurse = null;
+            for (const [name, setting] of Object.entries(scenario.nurseSettings)) {
+                if (setting.assignedBeds.includes(bedId)) {
+                    assignedNurse = name;
+                    break;
+                }
+            }
+
+            // タスク定義を探す
+            let originalTask = null;
+            let category = "care";
+            for (const cat in careTasks) {
+                const found = careTasks[cat].items.find(t => t.name === taskName);
+                if (found) {
+                    originalTask = found;
+                    category = cat;
+                    break;
+                }
+            }
+            if (!originalTask) {
+                console.warn(`Task not found: ${taskName}`);
+                return;
+            }
+
+            const startTime = new Date();
+            startTime.setHours(hour, minute, 0, 0);
+            const durationMinutes = originalTask.time * 5;
+
+            // ★タスクオブジェクトを作成
+            const newTask = {
+                id: `sc1_${bedId}_${taskName}_${Math.random()}`,
+                name: taskName,
+                category: category,
+                startTime: startTime,
+                endTime: new Date(startTime.getTime() + durationMinutes * 60000),
+                duration: durationMinutes,
+                assignedNurses: assignedNurse ? [assignedNurse] : [],
+                assignedBed: bedId,
+                displayRows: {}, // ★ここで計算する
+                isUnderstaffed: originalTask.staff > (assignedNurse ? 1 : 0)
+            };
+
+            // ★★★ displayRowsの計算 (看護師ボードでの表示位置) ★★★
+            if (newTask.assignedNurses.length > 0) {
+                newTask.assignedNurses.forEach(nurseName => {
+                    let placed = false;
+                    for (let row = 1; row <= 3; row++) {
+                        // 既存のタスクとの重複をチェック
+                        // 注意: isOverlappingはこのスコープで利用可能(ホイスティング)
+                        const hasOverlap = tasks.some(t =>
+                            t.assignedNurses.includes(nurseName) &&
+                            t.displayRows[nurseName] === row &&
+                            isOverlapping(t, newTask)
+                        );
+                        if (!hasOverlap) {
+                            newTask.displayRows[nurseName] = row;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        // 3行とも埋まっている場合は強制的に1行目に表示（または警告）
+                        newTask.displayRows[nurseName] = 1;
+                    }
+                });
+            }
+
+            tasks.push(newTask);
+        }
+
+        // ヘルパー：ケアセットを適用する
+        function applyCareSet(bedId, dept, summary, supplement) {
+            const set = careSets[dept]?.[summary]?.[supplement];
+            if (!set) {
+                console.warn(`Care set not found: ${dept} > ${summary} > ${supplement}`);
+                return;
+            }
+            // AM
+            if (set.am) {
+                set.am.forEach(t => {
+                    const [h, m] = t.startTime.split(':').map(Number);
+                    addTask(bedId, t.name, h, m);
+                });
+            }
+            // PM
+            if (set.pm) {
+                set.pm.forEach(t => {
+                    const [h, m] = t.startTime.split(':').map(Number);
+                    addTask(bedId, t.name, h, m);
+                });
+            }
+        }
+
+        // --- CSVに基づくタスク適用 ---
+        // 北病棟
+        applyCareSet("A", "脊外", "TES", "1病日目");
+        applyCareSet("B", "心外", "CABG、弁置換、弓部置換", "2病日目");
+        applyCareSet("C", "呼外", "VATS", "1病日目");
+        applyCareSet("D", "心外", "CABG、弁置換、弓部置換", "2病日目"); // 弓部置換→CABGグループ
+        applyCareSet("E", "心外", "EVAR/TEVAR", "1病日目");
+
+        // F: 個別 (腹膜炎)
+        addTask("F", "SAT/SBT", 10, 0);
+        addTask("F", "清拭2", 11, 0); // 清拭(重症なので2人介助か、単純に清拭1か。ここでは清拭2としておく)
+        addTask("F", "口腔ケア(挿管)", 12, 0);
+        addTask("F", "口腔ケア(挿管)", 14, 0);
+        addTask("F", "体位交換(挿管)", 10, 0);
+        addTask("F", "体位交換(挿管)", 12, 0);
+        addTask("F", "体位交換(挿管)", 14, 0);
+        addTask("F", "抜管", 16, 0);
+
+        // G: 個別 (食道動脈瘤)
+        addTask("G", "清拭1", 10, 0); // CSV: 清拭
+        addTask("G", "CV/PICC", 12, 0); // CSV: CV挿入
+
+        applyCareSet("J", "心外", "EVAR/TEVAR", "1病日目");
+
+        // L: 個別 (COVID-19)
+        addTask("L", "清拭1", 10, 0);
+        addTask("L", "抜管", 11, 0); // CSV: 気切チューブ自己抜管 -> 抜管(代用)
+
+        // 南病棟
+        applyCareSet("1", "心外", "B解離", "Stage2");
+        applyCareSet("2", "消外", "食道切除", "1/2病日目"); // 腎内だがケアセットは食道切除
+        applyCareSet("3", "呼外", "VATS", "1病日目");
+        applyCareSet("4", "心外", "B解離", "Stage2");
+        applyCareSet("5", "肝外", "PD", "1/2病日目"); // 肝外, PD
+        applyCareSet("6", "救急", "意識障害", "1病日目～"); // 精神科だが救急セット
+        applyCareSet("7", "呼外", "VATS", "1病日目");
+        applyCareSet("8", "心外", "CABG、弁置換、弓部置換", "1病日目");
+        applyCareSet("9", "心外", "CABG、弁置換、弓部置換", "1病日目"); // 小児だが心外セット
+
+        return tasks;
+    }
+
+    // 初期化時にタスク生成を実行
+    defaultScenarios["シナリオ1"].placedTasks = generateScenario1Tasks();
 
     // ----------------------------------------
     // 状態管理
@@ -552,11 +700,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const northCount = parseInt(countNorthInput.value, 10);
         const southCount = parseInt(countSouthInput.value, 10);
 
-        if (ward === 'north') {
-            nurseList = generateNurseList(northCount, 1, '北');
+        if (ward === 'south') {
+            nurseList = generateNurseList(southCount, 1, '南');
         } else {
-            const southStartNumber = northCount;
-            nurseList = generateNurseList(southCount, southStartNumber, '南');
+            nurseList = generateNurseList(northCount, southCount, '北');
         }
 
         nurseList.forEach((name, index) => {
@@ -564,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nameBlock.classList.add('nurse-name-block');
             nameBlock.dataset.nurseName = name; // ★★★ 修正: data属性に純粋な看護師名を保存 ★★★
             nameBlock.textContent = name;
-            
+
             // ★★★ 修正: 看護師レベルに応じたマークを追加 ★★★
             const settings = nurseSettings[name] || {};
             nameBlock.classList.add(`nurse-level-${settings.level || '新人'}`); // CSSでのスタイリング用クラス
@@ -641,7 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const severityClass = patient.isEmpty ? 'empty-bed' : `severity-${patient.severity || 1}`;
             rowGroup.classList.add(severityClass);
             rowGroup.id = `bed-group-${name}`; // ★★★ 追加: 更新用にIDを付与 ★★★
-            
+
             const timelineRow = document.createElement('div');
             timelineRow.classList.add('timeline-row');
             // ★背景グリッド用のコンテナを追加
@@ -659,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             timelineRow.addEventListener('drop', (e) => handleDropOnTimeline(e, timelineRow));
             // --- ▲▲▲ ドラッグ＆ドロップのイベントリスナーを追加 ▲▲▲ ---
-            
+
             timelineBody.appendChild(rowGroup);
         });
     }
@@ -817,7 +964,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const match = timelineRow.id.match(/nurse(\d+)/);
             const nurseIndex = match ? parseInt(match[1], 10) - 1 : -1;
             const northCount = parseInt(countNorthInput.value, 10);
-            const tempNurseList = (currentWard === 'north') ? generateNurseList(northCount, 1, '北') : generateNurseList(parseInt(countSouthInput.value, 10), northCount, '南');
+            const southCount = parseInt(countSouthInput.value, 10);
+            const tempNurseList = (currentWard === 'south') ? generateNurseList(southCount, 1, '南') : generateNurseList(northCount, southCount, '北');
             const destinationNurseName = (nurseIndex >= 0) ? tempNurseList[nurseIndex] : null;
 
             if (sourceNurseName && destinationNurseName && sourceNurseName !== destinationNurseName) {
@@ -1253,7 +1401,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const match = droppedRowId.match(/nurse(\d+)/);
             const nurseIndex = match ? parseInt(match[1], 10) - 1 : -1;
             // 対応する看護師名を取得（後続の処理で生成されるnurseListを仮定）
-            const tempNurseList = (currentWard === 'north') ? generateNurseList(parseInt(countNorthInput.value, 10), 1, '北') : generateNurseList(parseInt(countSouthInput.value, 10), parseInt(countNorthInput.value, 10), '南');
+            const southCount = parseInt(countSouthInput.value, 10);
+            const tempNurseList = (currentWard === 'south') ? generateNurseList(southCount, 1, '南') : generateNurseList(parseInt(countNorthInput.value, 10), southCount, '北');
             if (nurseIndex >= 0 && nurseIndex < tempNurseList.length) {
                 droppedNurseName = tempNurseList[nurseIndex];
             }
@@ -1275,11 +1424,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const northCount = parseInt(countNorthInput.value, 10);
         const southCount = parseInt(countSouthInput.value, 10);
         let nurseList;
-        if (currentWard === 'north') {
-            nurseList = generateNurseList(northCount, 1, '北');
+        if (currentWard === 'south') {
+            nurseList = generateNurseList(southCount, 1, '南');
         } else {
-            const southStartNumber = northCount;
-            nurseList = generateNurseList(southCount, southStartNumber, '南');
+            nurseList = generateNurseList(northCount, southCount, '北');
         }
 
         nurseList.forEach((nurseName, index) => {
@@ -1476,7 +1624,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 看護師ボードの場合
                 const northCount = parseInt(countNorthInput.value, 10);
                 const southCount = parseInt(countSouthInput.value, 10);
-                const currentNurseList = (currentWard === 'north') ? generateNurseList(northCount, 1, '北') : generateNurseList(southCount, northCount, '南');
+                const currentNurseList = (currentWard === 'south') ? generateNurseList(southCount, 1, '南') : generateNurseList(northCount, southCount, '北');
                 const nurseRowGroups = timelineBody.querySelectorAll('.nurse-row-group');
 
                 task.assignedNurses.forEach(nurseName => {
@@ -1655,7 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const [hour, minute] = heatmapTimeInput.value.split(':').map(Number);
         const targetTime = new Date();
         targetTime.setHours(hour, minute, 0, 0);
-    
+
         const nurseNameBlocks = document.querySelectorAll('.nurse-name-block');
         nurseNameBlocks.forEach(block => {
             const nurseName = block.dataset.nurseName; // ★★★ 修正: data属性から純粋な名前を取得 ★★★
@@ -1672,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    
+
             for (const bedId of assignedBeds) {
                 const patient = patientData[bedId];
                 // 空床でなく、データが存在する場合のみ計算
@@ -1685,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-    
+
             // 2. 指定時刻のケア（タスク）数を計算
             const careCount = placedTasks.filter(task =>
                 task.assignedNurses.includes(nurseName) &&
@@ -1719,7 +1867,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     densityBonus = 1;
                 }
             }
-    
+
             // 3. 新しいルールに基づいてヒートマップレベルを決定
             let level = 1; // デフォルトレベル
 
@@ -1742,7 +1890,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // レベル1 (応援可)
             else if (totalSeverity <= 7 && careCount === 0) level = 1;
             else if (totalSeverity >= 1 && totalSeverity <= 4 && careCount === 1) level = 1;
-    
+
             // 4. レベルに応じた色を適用
             // ★★★ 密度ボーナスをレベルに加算（最大5） ★★★
             level = Math.min(level + densityBonus, 5);
@@ -1783,7 +1931,7 @@ document.addEventListener('DOMContentLoaded', () => {
             box.style.backgroundColor = colors[level - 1];
         });
     }
-    
+
     // ----------------------------------------
     // ★関数: 患者情報モーダルを開く
     // ----------------------------------------
@@ -1830,7 +1978,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------
     function updatePatientDisplay(bedId) {
         const data = patientData[bedId] || {};
-        
+
         // 1. ベッドボードのサマリー欄を更新
         const summaryBlock = document.getElementById(`bed${bedId}-summary`);
         if (summaryBlock) {
@@ -2249,9 +2397,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const match = parentRow.id.match(/nurse(\d+)/);
                 const nurseIndex = match ? parseInt(match[1], 10) - 1 : -1;
                 const northCount = parseInt(countNorthInput.value, 10);
-                const tempNurseList = (currentWard === 'north') ? generateNurseList(northCount, 1, '北') : generateNurseList(parseInt(countSouthInput.value, 10), northCount, '南');
+                const southCount = parseInt(countSouthInput.value, 10);
+                const tempNurseList = (currentWard === 'south') ? generateNurseList(southCount, 1, '南') : generateNurseList(northCount, southCount, '北');
                 const sourceNurseName = (nurseIndex >= 0) ? tempNurseList[nurseIndex] : null;
-                if(sourceNurseName) e.dataTransfer.setData('text/source-nurse', sourceNurseName);
+                if (sourceNurseName) e.dataTransfer.setData('text/source-nurse', sourceNurseName);
             }
             e.stopPropagation(); // ケアリストからのドラッグと区別
         });
@@ -2542,7 +2691,7 @@ document.addEventListener('DOMContentLoaded', () => {
             southGroup.appendChild(item);
         });
         applyCareSetBedList.appendChild(southGroup);
- 
+
         // 北病棟
         const northGroup = document.createElement('div');
         northGroup.className = 'ward-group';
@@ -2691,7 +2840,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 container.appendChild(cell);
             }
         });
-        
+
         // --- 4. ヘッダーの高さ調整 (CSSで一元管理するため不要に) ---
         if (namesHeaderSpacer) {
             // namesHeaderSpacer.style.height = "48.5px";
@@ -2798,6 +2947,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ★シナリオ管理のイベントリスナー
     btnSaveScenario.addEventListener('click', saveScenario);
+    btnLoadScenario.addEventListener('click', loadScenario);
     btnDeleteScenario.addEventListener('click', deleteScenario);
     scenarioSelect.addEventListener('change', loadScenario);
 
@@ -2839,7 +2989,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            
+
             let newX = e.clientX - offsetX;
             let newY = e.clientY - offsetY;
 
@@ -2862,6 +3012,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------
     // 初期描画
     // ----------------------------------------
+    // ----------------------------------------
+    // 初期描画
+    // ----------------------------------------
     async function initializeApp() {
         let loadedScenarios = {}; // ★シナリオデータを保持する変数
 
@@ -2869,16 +3022,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await loadAllDataFromServer();
         let scenarios = data.scenarios || {};
 
-        // ★★★ 修正: localStorageのシナリオが空の場合、デフォルトシナリオを読み込む ★★★
-        if (!scenarios || Object.keys(scenarios).length === 0) {
-            scenarios = defaultScenarios;
-        }
+        // ★★★ 修正: localStorageのシナリオにデフォルトシナリオをマージ（上書き）する ★★★
+        // これにより、コード側でデフォルトシナリオを修正した場合に、ブラウザ側のデータを更新できる
+        scenarios = { ...scenarios, ...defaultScenarios };
+
+        // ★修正後は保存しておく（ユーザーが作成したシナリオは消えない）
+        saveAllDataToServer(scenarios);
 
         // ★★★ 修正: localStorageのケアセットが空の場合、デフォルトケアセットを使う ★★★
         // Object.keys(...).length > 0 で、空のオブジェクトでないことを確認
         if (data.careSets && Object.keys(data.careSets).length > 0) {
-            careSets = data.careSets; // localStorageのデータで上書き
-        } // なければ、コードで定義済みのcareSetsがそのまま使われる
+            // ★注意: ここでもマージするか検討が必要だが、ケアセットはユーザーがいじる頻度が高いため
+            // 一旦localStorage優先にするが、もし構造が変わった場合はリセットが必要かもしれない
+            careSets = data.careSets;
+        }
+
+        // ★★★ 修正: 整形→脊外の変更漏れ修正 (careSets内のキーがもし古ければ修正) ★★★
+        // （既にコード上のcareSetsは修正済みだが、localStorageからロードしたcareSetsに古いキーが残っている場合の対応）
+        if (careSets["整形"]) {
+            careSets["脊外"] = careSets["整形"];
+            delete careSets["整形"];
+            saveAllDataToServer(scenarios); // 保存
+        }
+        // ★★★ 修正: シナリオ1のデータ内の「整形」も「脊外」に置換しておく（念のため）
+        if (scenarios["シナリオ1"] && scenarios["シナリオ1"].patientData) {
+            for (const bedId in scenarios["シナリオ1"].patientData) {
+                if (scenarios["シナリオ1"].patientData[bedId].dept === "整形") {
+                    scenarios["シナリオ1"].patientData[bedId].dept = "脊外";
+                }
+            }
+        }
+
 
         // 2. UIの初期化
         initializeBedDisplays();
