@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tasks = [];
         const scenario = defaultScenarios["シナリオ1"];
 
-        // ヘルパー：タスクを追加する
+        // ヘルパー：タスクを追加する（患者ケア用）
         function addTask(bedId, taskName, hour, minute) {
             // 担当看護師を探す
             let assignedNurse = null;
@@ -532,9 +532,73 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!placed) {
                         // 3行とも埋まっている場合は強制的に1行目に表示（または警告）
                         newTask.displayRows[nurseName] = 1;
+                        console.warn(`配置警告: ${nurseName}の${taskName}がオーバーフローしています`);
                     }
                 });
             }
+
+            tasks.push(newTask);
+        }
+
+        // ★★★ 新規ヘルパー：看護師の共通イベントを追加する ★★★
+        function addNurseCommonTask(nurseNames, taskName, hour, minute, assignedBed = null) {
+            // タスク定義を探す
+            let originalTask = null;
+            let category = "work"; // 共通イベントは基本的に「業務」カテゴリ
+            for (const cat in careTasks) {
+                const found = careTasks[cat].items.find(t => t.name === taskName);
+                if (found) {
+                    originalTask = found;
+                    category = cat;
+                    break;
+                }
+            }
+            if (!originalTask) {
+                console.warn(`Common task not found: ${taskName}`);
+                return;
+            }
+
+            const startTime = new Date();
+            startTime.setHours(hour, minute, 0, 0);
+            const durationMinutes = originalTask.time * 5;
+
+            // 看護師名が配列でない場合は配列に変換
+            const nurses = Array.isArray(nurseNames) ? nurseNames : [nurseNames];
+
+            // ★タスクオブジェクトを作成
+            const newTask = {
+                id: `sc1_common_${taskName}_${hour}_${minute}_${Math.random()}`,
+                name: taskName,
+                category: category,
+                startTime: startTime,
+                endTime: new Date(startTime.getTime() + durationMinutes * 60000),
+                duration: durationMinutes,
+                assignedNurses: nurses,
+                assignedBed: assignedBed, // 共通イベントは通常ベッドなし
+                displayRows: {},
+                isUnderstaffed: false // 共通イベントは人員不足判定しない
+            };
+
+            // ★★★ displayRowsの計算 ★★★
+            nurses.forEach(nurseName => {
+                let placed = false;
+                for (let row = 1; row <= 3; row++) {
+                    const hasOverlap = tasks.some(t =>
+                        t.assignedNurses.includes(nurseName) &&
+                        t.displayRows[nurseName] === row &&
+                        isOverlapping(t, newTask)
+                    );
+                    if (!hasOverlap) {
+                        newTask.displayRows[nurseName] = row;
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    newTask.displayRows[nurseName] = 1;
+                    console.warn(`配置警告: ${nurseName}の共通イベント${taskName}(${hour}:${minute})が他のタスクと重複しています`);
+                }
+            });
 
             tasks.push(newTask);
         }
@@ -562,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // --- CSVに基づくタスク適用 ---
+        // --- CSVに基づく患者ケアタスク適用 ---
         // 北病棟
         applyCareSet("A", "脊外", "TES", "1病日目");
         applyCareSet("B", "心外", "CABG、弁置換、弓部置換", "2病日目");
@@ -572,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // F: 個別 (腹膜炎)
         addTask("F", "SAT/SBT", 10, 0);
-        addTask("F", "清拭2", 11, 0); // 清拭(重症なので2人介助か、単純に清拭1か。ここでは清拭2としておく)
+        addTask("F", "清拭2", 11, 0);
         addTask("F", "口腔ケア(挿管)", 12, 0);
         addTask("F", "口腔ケア(挿管)", 14, 0);
         addTask("F", "体位交換(挿管)", 10, 0);
@@ -581,25 +645,108 @@ document.addEventListener('DOMContentLoaded', () => {
         addTask("F", "抜管", 16, 0);
 
         // G: 個別 (食道動脈瘤)
-        addTask("G", "清拭1", 10, 0); // CSV: 清拭
-        addTask("G", "CV/PICC", 12, 0); // CSV: CV挿入
+        addTask("G", "清拭1", 10, 0);
+        addTask("G", "CV/PICC", 12, 0);
 
         applyCareSet("J", "心外", "EVAR/TEVAR", "1病日目");
 
         // L: 個別 (COVID-19)
         addTask("L", "清拭1", 10, 0);
-        addTask("L", "抜管", 11, 0); // CSV: 気切チューブ自己抜管 -> 抜管(代用)
+        addTask("L", "抜管", 11, 0);
 
         // 南病棟
         applyCareSet("1", "心外", "B解離", "Stage2");
-        applyCareSet("2", "消外", "食道切除", "1/2病日目"); // 腎内だがケアセットは食道切除
+        applyCareSet("2", "消外", "食道切除", "1/2病日目");
         applyCareSet("3", "呼外", "VATS", "1病日目");
         applyCareSet("4", "心外", "B解離", "Stage2");
-        applyCareSet("5", "肝外", "PD", "1/2病日目"); // 肝外, PD
-        applyCareSet("6", "救急", "意識障害", "1病日目～"); // 精神科だが救急セット
+        applyCareSet("5", "肝外", "PD", "1/2病日目");
+        applyCareSet("6", "救急", "意識障害", "1病日目～");
         applyCareSet("7", "呼外", "VATS", "1病日目");
         applyCareSet("8", "心外", "CABG、弁置換、弓部置換", "1病日目");
-        applyCareSet("9", "心外", "CABG、弁置換、弓部置換", "1病日目"); // 小児だが心外セット
+        applyCareSet("9", "心外", "CABG、弁置換、弓部置換", "1病日目");
+
+        // ★★★ 看護師の共通イベントを追加 ★★★
+        // 全看護師のリストを作成
+        const allNurses = Object.keys(scenario.nurseSettings);
+
+        // 8:30 - 申し送り (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "申し送り", 8, 30);
+        });
+
+        // 9:00 - カンファレンス (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "カンファレンス", 9, 0);
+        });
+
+        // 9:15 - 点滴セット (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "点滴セット", 9, 15);
+        });
+
+        // 11:30 - 休憩 (半数の看護師)
+        // 偶数インデックスの看護師
+        allNurses.forEach((nurse, index) => {
+            if (index % 2 === 0) {
+                addNurseCommonTask(nurse, "休憩", 11, 30);
+            }
+        });
+
+        // 12:30 - 休憩 (残り半数の看護師)
+        // 奇数インデックスの看護師
+        allNurses.forEach((nurse, index) => {
+            if (index % 2 === 1) {
+                addNurseCommonTask(nurse, "休憩", 12, 30);
+            }
+        });
+
+        // 13:00 - 面会/家族対応 (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "面会/家族対応", 13, 0);
+        });
+
+        // 14:00 - 点滴セット (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "点滴セット", 14, 0);
+        });
+
+        // 15:00 - 指示受け (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "指示受け", 15, 0);
+        });
+
+        // 16:00 - 申し送り (全看護師)
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "申し送り", 16, 0);
+        });
+
+        // 18:00 - 面会/家族対応 (全看護師) ※シフト終了後だが記録用
+        // ※18:00はシフト範囲外(8:00-13:00)のため、PMビューでのみ表示可能
+        allNurses.forEach(nurse => {
+            addNurseCommonTask(nurse, "面会/家族対応", 18, 0);
+        });
+
+        // ★★★ 重複チェックと時間調整 ★★★
+        // すべてのタスクが追加された後、重複をチェックして警告を表示
+        console.log(`シナリオ1: 合計${tasks.length}個のタスクを生成しました`);
+
+        // 重複があるタスクをカウント
+        let overlapCount = 0;
+        allNurses.forEach(nurse => {
+            const nurseTasks = tasks.filter(t => t.assignedNurses.includes(nurse));
+            for (let i = 0; i < nurseTasks.length; i++) {
+                for (let j = i + 1; j < nurseTasks.length; j++) {
+                    if (isOverlapping(nurseTasks[i], nurseTasks[j])) {
+                        overlapCount++;
+                        console.warn(`時間重複: ${nurse} - ${nurseTasks[i].name}(${nurseTasks[i].startTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}) と ${nurseTasks[j].name}(${nurseTasks[j].startTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })})`);
+                    }
+                }
+            }
+        });
+
+        if (overlapCount > 0) {
+            console.warn(`合計${overlapCount}件の時間重複が検出されました。患者ケアの時間を調整してください。`);
+        }
 
         return tasks;
     }
